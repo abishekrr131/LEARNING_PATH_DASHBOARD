@@ -1,0 +1,21 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply transition-colors duration-200;
+  }
+}
+
+.gradient-lavender-coral {
+  background: linear-gradient(135deg, #8B5CF6 0%, #C4B5FD 45%, #FB7185 100%);
+}
+
+.gradient-card {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.9) 0%, rgba(245, 243, 255, 0.6) 100%);
+}
+
+.dark .gradient-card {
+  background: linear-gradient(180deg, rgba(30, 16, 53, 0.8) 0%, rgba(15, 7, 29, 0.9) 100%);
+}

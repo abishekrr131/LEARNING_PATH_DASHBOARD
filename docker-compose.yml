@@ -1,0 +1,110 @@
+version: "3.9"
+
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    container_name: palp-db
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-palp}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-palp_secret_password}
+      POSTGRES_DB: ${POSTGRES_DB:-palp}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-palp} -d ${POSTGRES_DB:-palp}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: palp-redis
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: palp-api
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    environment:
+      ENV: ${ENV:-development}
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-palp}:${POSTGRES_PASSWORD:-palp_secret_password}@db:5432/${POSTGRES_DB:-palp}
+      REDIS_URL: redis://redis:6379/0
+      ML_SERVICE_URL: http://ml:8100
+      JWT_SECRET: ${JWT_SECRET:-super-secret-jwt-key-for-palp-dashboard-development-2026}
+      JWT_ALGORITHM: ${JWT_ALGORITHM:-HS256}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
+      MOCK_GOOGLE_AUTH: ${MOCK_GOOGLE_AUTH:-true}
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+      THETA_SUSPECT: ${THETA_SUSPECT:-0.45}
+      EPSILON_PROBE: ${EPSILON_PROBE:-0.10}
+      ENTROPY_GUARD: ${ENTROPY_GUARD:-0.70}
+      MASTERY_TARGET: ${MASTERY_TARGET:-0.60}
+      TAU_DAYS: ${TAU_DAYS:-60}
+      COLD_START_MIN_INTERACTIONS: ${COLD_START_MIN_INTERACTIONS:-20}
+      SPECIAL_MAIN_Q_TIME_SEC: ${SPECIAL_MAIN_Q_TIME_SEC:-30}
+      SPECIAL_SUB_Q_COUNT: ${SPECIAL_SUB_Q_COUNT:-3}
+      SPECIAL_SUB_Q_TIME_SEC: ${SPECIAL_SUB_Q_TIME_SEC:-20}
+      SPECIAL_DEFAULT_MAIN_COUNT: ${SPECIAL_DEFAULT_MAIN_COUNT:-5}
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+
+  ml:
+    build:
+      context: ./ml
+      dockerfile: Dockerfile
+    container_name: palp-ml
+    command: uvicorn rct_gat.serve:app --host 0.0.0.0 --port 8100
+    environment:
+      MODEL_VERSION: ${MODEL_VERSION:-rct-gat-1.0.0-baseline}
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-palp}:${POSTGRES_PASSWORD:-palp_secret_password}@db:5432/${POSTGRES_DB:-palp}
+    volumes:
+      - ./models:/app/models:ro
+    expose:
+      - "8100"
+    ports:
+      - "8100:8100"
+
+  worker:
+    build:
+      context: ./ml
+      dockerfile: Dockerfile
+    container_name: palp-worker
+    command: celery -A tasks worker -B --loglevel=info
+    environment:
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-palp}:${POSTGRES_PASSWORD:-palp_secret_password}@db:5432/${POSTGRES_DB:-palp}
+      REDIS_URL: redis://redis:6379/0
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  web:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: palp-web
+    ports:
+      - "80:80"
+      - "5173:5173"
+    depends_on:
+      - api
+
+volumes:
+  pgdata:
