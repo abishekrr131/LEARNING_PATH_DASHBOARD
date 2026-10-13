@@ -1,9 +1,58 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import MainLayout from "../layouts/MainLayout";
+import { weeklyTestApi } from "../api/client";
 
 export default function AssessmentsHub() {
   const navigate = useNavigate();
+  const [weeklyStatus, setWeeklyStatus] = useState(null);
+
+  useEffect(() => {
+    weeklyTestApi.getStatus().then(setWeeklyStatus).catch(() => null);
+  }, []);
+
+  const getWeeklyBadge = () => {
+    if (!weeklyStatus || !weeklyStatus.is_scheduled) {
+      return {
+        badge: "Locked • Requires Diagnostic",
+        color: "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400",
+        actionText: "Take Diagnostic First",
+        path: "/diagnostic/instructions",
+      };
+    }
+    if (weeklyStatus.status === "completed") {
+      return {
+        badge: "Completed ✓ • Cycle Done",
+        color: "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300",
+        actionText: "View Schedule",
+        path: "/schedule",
+      };
+    }
+    if (weeklyStatus.is_overdue) {
+      return {
+        badge: "Overdue • Day 7 Milestone",
+        color: "bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300 border border-rose-300 dark:border-rose-800",
+        actionText: "Take Weekly Test (Overdue)",
+        path: "/weekly-test",
+      };
+    }
+    if (weeklyStatus.is_due) {
+      return {
+        badge: "Due Today • Day 7 Milestone",
+        color: "bg-purple-100 text-purple-800 dark:bg-purple-950/60 dark:text-purple-300 border border-purple-300 dark:border-purple-800",
+        actionText: "Start Weekly Test",
+        path: "/weekly-test",
+      };
+    }
+    return {
+      badge: `Not due yet • Due ${weeklyStatus.scheduled_date}`,
+      color: "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400",
+      actionText: "Not Due Yet",
+      path: "/weekly-test",
+    };
+  };
+
+  const weeklyBadge = getWeeklyBadge();
 
   const assessmentModes = [
     {
@@ -17,6 +66,18 @@ export default function AssessmentsHub() {
       actionText: "Start Diagnostic",
       path: "/diagnostic/instructions",
       primary: true,
+    },
+    {
+      id: "weekly",
+      title: "Weekly Progress Test (20 Qs)",
+      badge: weeklyBadge.badge,
+      badgeColor: weeklyBadge.color,
+      description:
+        "Comprehensive 20-item milestone: 10 questions from weekly priority topics, 5 root-cause prerequisite items, and 5 spaced reviews. Calibrates mastery and generates next week's schedule.",
+      meta: "20 Questions • ~25 Mins • Scored Milestone",
+      actionText: weeklyBadge.actionText,
+      path: weeklyBadge.path,
+      primary: Boolean(weeklyStatus?.is_due || weeklyStatus?.is_overdue),
     },
     {
       id: "special",

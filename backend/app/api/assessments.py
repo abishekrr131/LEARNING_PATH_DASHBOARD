@@ -2,12 +2,15 @@
 from __future__ import annotations
 
 import datetime as dt
+import logging
 import math
 import random
 from typing import Any
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
+
+logger = logging.getLogger(__name__)
 
 from backend.app.core.security import get_current_user
 from backend.app.db.session import get_db
@@ -18,7 +21,9 @@ from backend.app.models.core import (
     Concept,
     ConceptDependency,
     LearnerProfile,
+    LearningSchedule,
     Question,
+    RootCauseAnalysis,
     Skill,
     StudentMastery,
     StudentResponse,
@@ -34,10 +39,19 @@ from backend.app.schemas.assessment import (
     AssessmentSubmitOut,
     ConceptScore,
     ItemOut,
+    RootCauseEvaluateIn,
+    RootCauseEvaluateOut,
+    RootCauseSubQuestionsIn,
+    RootCauseSubQuestionsOut,
     SpecialBlockEndIn,
     SpecialBlockEndOut,
     SpecialNextBlockIn,
     SpecialNextBlockOut,
+)
+from backend.app.services.question_generator import (
+    classify_root_cause_gap,
+    generate_root_cause_sub_questions,
+    to_options_list,
 )
 from backend.app.services.root_cause import get_ancestors_within_hops, select_verification_probes
 from backend.app.services.scoring import (
@@ -135,55 +149,41 @@ def start_assessment(
     selected_questions: list[tuple[Question, str]] = []
 
     if req.type == "initial":
-        # Exactly 10 questions, stratified across skills in proportion to skill weight
-        # Ordered easy -> hard, no repeats
-        total_items = 10
-        skill_quotas = {}
-        allocated = 0
+        # Exactly 10 questions, allocated using largest-remainder rounding across skills by syllabus weight
+        # Random within skill, ordered easy -> hard
+        from backend.app.api.diagnostic import allocate_questions_largest_remainder
+
+        skill_quotas = allocate_questions_largest_remainder(skills, total_items=10)
+        selected_questions = []
+
         for s in skills:
-            quota = max(1, round(s.weight * total_items))
-            skill_quotas[s.id] = quota
-            allocated += quota
+            quota = skill_quotas.get(s.id, 0)
+            if quota <= 0:
+                continue
 
-        # Adjust total to exactly 10
-        diff = allocated - total_items
-        if diff != 0:
-            top_skill_id = skills[0].id
-            skill_quotas[top_skill_id] = max(1, skill_quotas[top_skill_id] - diff)
+            approved_qs = db.execute(
+                select(Question, Concept.name)
+                .join(Concept, Question.concept_id == Concept.id)
+                .join(Topic, Concept.topic_id == Topic.id)
+                .join(Skill, Topic.skill_id == Skill.id)
+                .where(
+                    Skill.id == s.id,
+                    Question.review_status == "approved",
+                )
+            ).all()
 
-        all_pool = get_candidate_questions()
-        qs_by_skill: dict[int, list[tuple[Question, str]]] = {s.id: [] for s in skills}
-        for q, cname in all_pool:
-            # find skill
-            c = db.get(Concept, q.concept_id)
-            if c:
-                t = db.get(Topic, c.topic_id)
-                if t and t.skill_id in qs_by_skill:
-                    qs_by_skill[t.skill_id].append((q, cname))
+            if len(approved_qs) < quota:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=(
+                        f"Question bank not seeded: Insufficient approved questions for skill '{s.name}'. "
+                        f"Required {quota}, found {len(approved_qs)}."
+                    ),
+                )
 
-        chosen_set = set()
-        for s in skills:
-            pool = qs_by_skill.get(s.id, [])
-            quota = skill_quotas.get(s.id, 1)
-            # sort pool by difficulty easy -> hard
-            pool.sort(key=lambda x: x[0].difficulty_b)
-            for item in pool:
-                if len(selected_questions) >= 10:
-                    break
-                if item[0].id not in chosen_set and quota > 0:
-                    selected_questions.append(item)
-                    chosen_set.add(item[0].id)
-                    quota -= 1
+            sample = random.sample(approved_qs, quota)
+            selected_questions.extend(sample)
 
-        # Fill if below 10
-        for item in all_pool:
-            if len(selected_questions) >= 10:
-                break
-            if item[0].id not in chosen_set:
-                selected_questions.append(item)
-                chosen_set.add(item[0].id)
-
-        # Final sort: easy -> hard across all selected
         selected_questions.sort(key=lambda x: x[0].difficulty_b)
 
     elif req.type == "special":
@@ -199,8 +199,38 @@ def start_assessment(
         random.shuffle(all_pool)
         selected_questions = all_pool[:3]
 
+    elif req.type == "practice":
+        from backend.app.services.question_generator import generate_practice_questions
+
+        practice_mode = req.practice_mode or "untimed"
+        count = req.count or (40 if practice_mode == "combined" else (10 if practice_mode == "speed" else 5))
+        try:
+            asmt_id, practice_items = generate_practice_questions(
+                db=db,
+                target=target,
+                current_user_id=current_user.id,
+                concept_id=req.concept_id,
+                topic_id=req.topic_id,
+                count=count,
+                practice_mode=practice_mode,
+            )
+            time_limit = 3600 if practice_mode == "combined" else (90 if practice_mode == "speed" else None)
+            return AssessmentStartOut(
+                assessment_id=asmt_id,
+                type="practice",
+                items=[ItemOut(**it) for it in practice_items],
+                time_limit_sec=time_limit,
+                practice_mode=practice_mode,
+            )
+        except Exception as e:
+            logger.warning("Practice session initialization error: %s", e)
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Could not initialize practice session: {str(e)}",
+            )
+
     else:
-        # Practice or followup
+        # Followup or generic
         all_pool = get_candidate_questions()
         random.shuffle(all_pool)
         selected_questions = all_pool[:10]
@@ -244,6 +274,7 @@ def start_assessment(
                 phase=phase,
                 time_limit_sec=time_limit,
                 block_index=order_idx if req.type == "special" else None,
+                source=getattr(q, "source", "curated") or "curated",
             )
         )
 
@@ -330,10 +361,9 @@ def get_special_next_block(
         db.commit()
 
     elif not is_correct or req.main_response.timed_out:
-        # Wrong or Timed Out -> BIAS TOWARD PREREQUISITES (ancestors within 1-2 hops)
+        # Wrong or Timed Out -> 3-stage Root-Cause Sub-Questions (Formula, Substitution, Timed Calculation)
         trigger = "prerequisite_bias"
-        target_concept_ids = list(ancestors.keys()) if ancestors else [main_q.concept_id]
-        for cid in target_concept_ids[:2]:
+        for cid in (list(ancestors.keys())[:2] if ancestors else [main_q.concept_id]):
             db.add(
                 VerificationProbe(
                     user_id=current_user.id,
@@ -341,7 +371,58 @@ def get_special_next_block(
                     trigger="model_flag",
                 )
             )
+
+        concept = db.get(Concept, main_q.concept_id)
+        topic = db.get(Topic, concept.topic_id) if concept and concept.topic_id else None
+        tname = topic.name if topic else (concept.name if concept else "Topic")
+        cname = concept.name if concept else "Concept"
+
+        from ai.gemini_client import GeminiClient
+        client = GeminiClient()
+        generated_sub_specs = generate_root_cause_sub_questions(
+            topic_name=tname,
+            concept_name=cname,
+            main_question_stem=main_q.question_text,
+            gemini_client=client,
+        )
+
+        sub_items_out: list[ItemOut] = []
+        for s_idx, spec in enumerate(generated_sub_specs):
+            sub_q = Question(
+                concept_id=main_q.concept_id,
+                question_text=spec["stem"],
+                options_json={opt["key"]: opt["text"] for opt in spec["options"]},
+                correct_answer=spec["correct_option"],
+                explanation=spec.get("explanation", ""),
+                difficulty_hint=-0.2 + (s_idx * 0.2),
+                source="gemini",
+                review_status="generated",
+            )
+            db.add(sub_q)
+            db.flush()
+            sub_items_out.append(
+                ItemOut(
+                    question_id=sub_q.id,
+                    concept_id=sub_q.concept_id,
+                    concept_name=cname,
+                    order_index=s_idx,
+                    question_text=sub_q.question_text,
+                    options=spec["options"],
+                    difficulty_b=sub_q.difficulty_b,
+                    phase="sub",
+                    time_limit_sec=spec.get("time_limit_sec", 20 if s_idx == 2 else 30),
+                    block_index=req.block_index,
+                    source="gemini",
+                )
+            )
         db.commit()
+        return SpecialNextBlockOut(
+            assessment_id=assessment.id,
+            block_index=req.block_index,
+            main_response_id=main_resp.id,
+            sub_questions=sub_items_out,
+            trigger=trigger,
+        )
     else:
         # Correct -> BIAS TOWARD SAME CONCEPT AT HIGHER DIFFICULTY
         trigger = "difficulty_boost"
@@ -369,6 +450,23 @@ def get_special_next_block(
             )
         ).all()
 
+    if len(sub_qs) < SUB_Q_COUNT:
+        # Fallback to approved bank questions across learner's target curriculum
+        existing_ids = {sq[0].id for sq in sub_qs} | {main_q.id}
+        curriculum_qs = db.execute(
+            select(Question, Concept.name)
+            .join(Concept, Question.concept_id == Concept.id)
+            .join(Topic, Concept.topic_id == Topic.id)
+            .join(Skill, Topic.skill_id == Skill.id)
+            .where(
+                Skill.target_id == assessment.target_id,
+                Question.id.not_in(existing_ids),
+                Question.review_status == "approved",
+            )
+        ).all()
+        random.shuffle(curriculum_qs)
+        sub_qs = list(sub_qs) + curriculum_qs[: (SUB_Q_COUNT - len(sub_qs))]
+
     # Pick up to SUB_Q_COUNT
     random.shuffle(sub_qs)
     chosen_sub = sub_qs[:SUB_Q_COUNT]
@@ -387,6 +485,7 @@ def get_special_next_block(
                 phase="sub",
                 time_limit_sec=SUB_Q_TIME_SEC,
                 block_index=req.block_index,
+                source=getattr(sq, "source", "curated") or "curated",
             )
         )
 
@@ -458,6 +557,43 @@ def record_special_block_end(
             "response_time_ms": sub_r.response_time_ms,
         })
 
+    classification = None
+    if len(sub_results) >= 3:
+        sub_0_corr = sub_results[0]["is_correct"]
+        sub_1_corr = sub_results[1]["is_correct"]
+        sub_2_corr = sub_results[2]["is_correct"]
+        sub_2_time = sub_results[2]["response_time_ms"]
+        classification = classify_root_cause_gap(
+            formula_correct=sub_0_corr,
+            substitution_correct=sub_1_corr,
+            calculation_correct=sub_2_corr,
+            calculation_time_ms=sub_2_time,
+            time_threshold_ms=20000,
+        )
+
+        main_concept = db.get(Concept, main_resp.question.concept_id) if (main_resp and main_resp.question) else None
+        main_topic = db.get(Topic, main_concept.topic_id) if (main_concept and main_concept.topic_id) else None
+
+        if main_resp and (not main_resp.is_correct or main_resp.timed_out):
+            rc_entry = RootCauseAnalysis(
+                user_id=current_user.id,
+                current_concept_id=main_resp.question.concept_id,
+                candidate_concept_id=main_resp.question.concept_id,
+                root_score=0.90 if classification["all_three_failed"] else 0.75,
+                attention_alpha=0.85,
+                attention_entropy=0.20,
+                rank=1,
+                evidence_json={
+                    "topic_id": main_topic.id if main_topic else None,
+                    "topic_name": main_topic.name if main_topic else (main_concept.name if main_concept else "Topic"),
+                    "concept_name": main_concept.name if main_concept else "Concept",
+                    "cognitive_gap": classification,
+                    "main_question_stem": main_resp.question.question_text if main_resp.question else "",
+                },
+                model_version="root_cause_sub_q_v1",
+            )
+            db.add(rc_entry)
+
     db.commit()
 
     return SpecialBlockEndOut(
@@ -466,6 +602,9 @@ def record_special_block_end(
         main_timed_out=main_resp.timed_out if main_resp else False,
         sub_results=sub_results,
         suspected_weak_prerequisite=weak_prereq_name,
+        cognitive_gap=classification,
+        gap_type=classification["gap_type"] if classification else None,
+        study_task=classification["study_task"] if classification else None,
     )
 
 
@@ -641,6 +780,100 @@ def submit_assessment(
     final_score = (correct_count / total_q) * 100.0 if total_q > 0 else 0.0
     assessment.score = final_score
     assessment.completed_at = answered_at
+
+    extra_readiness_pct = None
+    extra_skill_breakdown = None
+    extra_weak_topics = None
+    extra_roadmap = None
+
+    if assessment.type == "initial":
+        today = dt.date.today()
+        from backend.app.services.scoring import review_interval, readiness_score
+        from backend.app.services.path import build_personalized_path
+        from backend.app.services.root_cause import rank_root_cause_candidates
+        from backend.app.services.question_generator import synthesize_week_schedule
+
+        synthesize_week_schedule(
+            user_id=current_user.id,
+            target_id=assessment.target_id,
+            db=db,
+            week_number=1,
+            start_date=today,
+        )
+
+        # Build skill breakdown & readiness score
+        skills = db.execute(
+            select(Skill).where(Skill.target_id == assessment.target_id)
+        ).scalars().all()
+        masteries = db.execute(
+            select(StudentMastery).where(StudentMastery.user_id == current_user.id)
+        ).scalars().all()
+        mastery_map = {m.concept_id: m.mastery_score for m in masteries}
+        all_cs = db.execute(select(Concept)).scalars().all()
+        name_map = {c.id: c.name for c in all_cs}
+
+        skill_bds = []
+        readiness_in = []
+        for s in skills:
+            s_cids = db.execute(
+                select(Concept.id)
+                .join(Topic, Concept.topic_id == Topic.id)
+                .where(Topic.skill_id == s.id)
+            ).scalars().all()
+            assessed_m = [mastery_map[cid] for cid in s_cids if cid in mastery_map]
+            mean_m = sum(assessed_m) / len(assessed_m) if assessed_m else 0.50
+            skill_bds.append({
+                "skill_id": s.id,
+                "skill_name": s.name,
+                "weight": s.weight,
+                "accuracy": round(mean_m * 100, 1),
+                "mean_mastery": round(mean_m, 2),
+            })
+            readiness_in.append((s.weight, mean_m))
+
+        r_score = readiness_score(readiness_in)
+        extra_readiness_pct = round(r_score * 100, 1)
+        extra_skill_breakdown = skill_bds
+
+        # Weak topics from concept_scores
+        extra_weak_topics = [
+            {
+                "concept_id": cs.concept_id,
+                "concept_name": cs.concept_name,
+                "gap_score": cs.gap_score,
+                "band": cs.band,
+                "accuracy": cs.accuracy,
+            }
+            for cs in concept_scores
+            if cs.band in ("weak", "moderate")
+        ]
+
+        # Topological roadmap
+        deps = db.execute(select(ConceptDependency)).scalars().all()
+        g = SimpleDiGraph([(d.prerequisite_id, d.concept_id) for d in deps])
+        root_causes = []
+        for wt in extra_weak_topics[:3]:
+            ancestors = get_ancestors_within_hops(g, wt["concept_id"], max_hops=2)
+            cands = rank_root_cause_candidates(
+                surface_concept_id=wt["concept_id"],
+                ancestors_with_hops=ancestors,
+                concept_mastery=mastery_map,
+                concept_names=name_map,
+            )
+            if cands:
+                primary_c = cands[0]
+                cause_id = primary_c.get("candidate_concept_id") or primary_c.get("concept_id")
+                if cause_id is not None:
+                    root_causes.append(cause_id)
+
+        extra_roadmap = build_personalized_path(
+            g=g,
+            concept_names=name_map,
+            weak_concept_ids=[wt["concept_id"] for wt in extra_weak_topics],
+            remediation_prereq_ids=root_causes,
+            limit=12,
+        )
+
     db.commit()
 
     mean_tr = total_time_ratio / total_q if total_q > 0 else 1.0
@@ -658,6 +891,10 @@ def submit_assessment(
         probe_queued=probe_queue,
         path_changed=len(probe_queue) > 0,
         cold_start=cold_start,
+        readiness_percentage=extra_readiness_pct,
+        skill_breakdown=extra_skill_breakdown,
+        weak_topics=extra_weak_topics,
+        roadmap=extra_roadmap,
     )
 
 
@@ -691,6 +928,7 @@ def get_assessment(
             difficulty_b=q.difficulty_b,
             phase=aq.phase,
             block_index=aq.block_index,
+            source=getattr(q, "source", "curated") or "curated",
         )
         for aq, q, cname in questions_rows
     ]
@@ -707,3 +945,148 @@ def get_assessment(
         "items": items,
         "responses_count": len(responses),
     }
+
+
+@router.post("/root-cause/sub-questions", response_model=RootCauseSubQuestionsOut)
+def get_root_cause_sub_questions_endpoint(
+    req: RootCauseSubQuestionsIn,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Generates 3 short multiple-choice sub-questions in strict order:
+    1. Formula recall (30s)
+    2. Substitution / setup (30s)
+    3. Calculation (timed 20s)
+    """
+    question = db.get(Question, req.question_id)
+    if not question:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Question not found")
+
+    concept = db.get(Concept, question.concept_id)
+    topic = db.get(Topic, concept.topic_id) if concept and concept.topic_id else None
+    tname = topic.name if topic else (concept.name if concept else "Topic")
+    cname = concept.name if concept else "Concept"
+
+    from backend.app.models.core import SubQuestion
+    from backend.app.services.question_generator import to_options_list
+
+    stored_sqs = (
+        db.query(SubQuestion)
+        .filter(SubQuestion.parent_question_id == question.id)
+        .order_by(SubQuestion.order.asc())
+        .all()
+    )
+
+    if not stored_sqs:
+        return RootCauseSubQuestionsOut(
+            question_id=question.id,
+            topic_name=tname,
+            concept_name=cname,
+            main_question_stem=question.question_text,
+            sub_questions=[],
+            has_sub_questions=False,
+            message="No diagnostic sub-questions available",
+        )
+
+    sub_qs = [
+        {
+            "id": sq.id,
+            "stage": sq.stage,
+            "order": sq.order,
+            "stem": sq.stem,
+            "options": to_options_list(sq.options),
+            "correct_option": sq.correct_answer,
+            "time_limit_sec": sq.time_limit_sec,
+        }
+        for sq in stored_sqs
+    ]
+
+    return RootCauseSubQuestionsOut(
+        question_id=question.id,
+        topic_name=tname,
+        concept_name=cname,
+        main_question_stem=question.question_text,
+        sub_questions=sub_qs,
+        has_sub_questions=True,
+        message="3-stage sub-questions retrieved from question bank",
+    )
+
+
+@router.post("/root-cause/evaluate", response_model=RootCauseEvaluateOut)
+def evaluate_root_cause_endpoint(
+    req: RootCauseEvaluateIn,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Classifies cognitive root-cause gap based on the 3 sub-question stages:
+    - Formula wrong -> Formula knowledge gap
+    - Formula right, substitution wrong -> Application/setup gap
+    - Formula & substitution right, calculation wrong -> Calculation accuracy gap
+    - Calculation right but time > threshold -> Calculation speed gap
+    - All right -> Careless error
+    Stores cause in RootCauseAnalysis and shapes study task.
+    If all three failed, traces prerequisite DAG upstream.
+    """
+    question = db.get(Question, req.question_id)
+    if not question:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Question not found")
+
+    concept = db.get(Concept, question.concept_id)
+    topic = db.get(Topic, concept.topic_id) if concept and concept.topic_id else None
+    tname = topic.name if topic else (concept.name if concept else "Topic")
+    cname = concept.name if concept else "Concept"
+
+    classification = classify_root_cause_gap(
+        formula_correct=req.formula_correct,
+        substitution_correct=req.substitution_correct,
+        calculation_correct=req.calculation_correct,
+        calculation_time_ms=req.calculation_time_ms,
+        time_threshold_ms=req.time_threshold_ms,
+    )
+
+    upstream_prereqs = []
+    if classification["all_three_failed"]:
+        deps = db.execute(select(ConceptDependency)).scalars().all()
+        g = SimpleDiGraph([(d.prerequisite_id, d.concept_id) for d in deps])
+        ancestors = get_ancestors_within_hops(g, question.concept_id, max_hops=2)
+        for anc_id, hop in ancestors.items():
+            anc_c = db.get(Concept, anc_id)
+            if anc_c:
+                upstream_prereqs.append({
+                    "concept_id": anc_c.id,
+                    "concept_name": anc_c.name,
+                    "hops": hop,
+                })
+
+    rc_entry = RootCauseAnalysis(
+        user_id=current_user.id,
+        current_concept_id=question.concept_id,
+        candidate_concept_id=upstream_prereqs[0]["concept_id"] if upstream_prereqs else question.concept_id,
+        root_score=0.95 if classification["all_three_failed"] else 0.75,
+        attention_alpha=0.88,
+        attention_entropy=0.18,
+        rank=1,
+        evidence_json={
+            "topic_id": topic.id if topic else None,
+            "topic_name": tname,
+            "concept_name": cname,
+            "cognitive_gap": classification,
+            "main_question_stem": question.question_text,
+            "upstream_prerequisites": upstream_prereqs,
+        },
+        model_version="root_cause_sub_q_v1",
+    )
+    db.add(rc_entry)
+    db.commit()
+
+    return RootCauseEvaluateOut(
+        question_id=question.id,
+        topic_name=tname,
+        concept_name=cname,
+        gap_type=classification["gap_type"],
+        study_task=classification["study_task"],
+        action=classification["action"],
+        all_three_failed=classification["all_three_failed"],
+        stages=classification["stages"],
+        upstream_prerequisites=upstream_prereqs,
+    )

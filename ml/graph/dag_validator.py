@@ -58,8 +58,8 @@ class SimpleDiGraph:
         node_set = set(nodes)
         sub = SimpleDiGraph()
         for u in node_set:
+            sub.add_node(u)
             if u in self._adj:
-                sub.add_node(u)
                 for v, attr in self._adj[u].items():
                     if v in node_set:
                         sub.add_edge(u, v, weight=attr.get("weight", 1.0))

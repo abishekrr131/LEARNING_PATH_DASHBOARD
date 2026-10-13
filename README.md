@@ -97,12 +97,27 @@ npm run dev
 
 ---
 
+### 3. Question Bank Tools & Pre-generation
+```bash
+# Import questions from CSV or JSON files (mock tests, previous year papers)
+py -3.13 database/seed/import_questions.py --file path/to/questions.json
+
+# Pre-generate draft questions with Gemini flagged for human review
+py -3.13 database/seed/generate_draft_questions.py --target "Banking (IBPS PO)" --count 50
+
+# Approve, reject, or inspect questions in the review queue
+py -3.13 database/seed/review_queue.py --list
+py -3.13 database/seed/review_queue.py --approve <id>
+```
+
+---
+
 ## 🧪 Automated Test Verification
 
 Execute all test suites across the entire monorepo:
 
 ```bash
-# 1. Backend API & Psychometric Unit Tests (37 tests)
+# 1. Backend API & Psychometric Unit Tests (43 tests)
 py -3.13 -m pytest tests/backend -v
 
 # 2. Deep ML Architecture, GAT Layers & Invariant Tests (15 tests)
@@ -112,4 +127,5 @@ py -3.12 -m pytest tests/ml -v
 cd frontend
 npm test
 ```
-**Total: 57 / 57 Automated Tests Passing (100% Green)**.
+**Total: 63 / 63 Automated Tests Passing (100% Green)**.
+

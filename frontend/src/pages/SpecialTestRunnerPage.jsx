@@ -9,7 +9,7 @@ export default function SpecialTestRunnerPage() {
   const navigate = useNavigate();
 
   const [assessment, setAssessment] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [mainCount, setMainCount] = useState(5);
   const [hasStarted, setHasStarted] = useState(false);
@@ -17,16 +17,25 @@ export default function SpecialTestRunnerPage() {
   const startTest = async () => {
     setLoading(true);
     setError(null);
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(
+        () => reject(new Error("Session initialization timed out after 15s. Please retry.")),
+        15000
+      )
+    );
     try {
-      const data = await assessmentApi.start({
-        type: "special",
-        target_id: profile?.target_id || 1,
-        main_count: mainCount,
-      });
+      const data = await Promise.race([
+        assessmentApi.start({
+          type: "special",
+          target_id: profile?.target_id || 1,
+          main_count: mainCount,
+        }),
+        timeoutPromise,
+      ]);
       setAssessment(data);
       setHasStarted(true);
     } catch (err) {
-      setError(err.message || "Failed to initialize special timed assessment session.");
+      setError(err.message || "Failed to initialize special timed assessment session. Please retry.");
     } finally {
       setLoading(false);
     }
@@ -108,8 +117,15 @@ export default function SpecialTestRunnerPage() {
           </div>
 
           {error && (
-            <div className="p-3 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 rounded-xl text-rose-700 dark:text-rose-300 text-xs">
-              {error}
+            <div className="p-3 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 rounded-xl text-rose-700 dark:text-rose-300 text-xs flex items-center justify-between gap-3">
+              <span>{error}</span>
+              <button
+                type="button"
+                onClick={startTest}
+                className="px-3 py-1 bg-rose-600 hover:bg-rose-700 text-white rounded-lg font-bold shrink-0 shadow-sm"
+              >
+                Retry
+              </button>
             </div>
           )}
 
@@ -146,6 +162,7 @@ export default function SpecialTestRunnerPage() {
         initialItems={assessment.items}
         totalMainCount={mainCount}
         onFinished={handleFinished}
+        onCompleted={handleFinished}
       />
     </div>
   );

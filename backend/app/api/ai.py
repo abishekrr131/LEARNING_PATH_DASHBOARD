@@ -2,21 +2,38 @@
 from __future__ import annotations
 
 import json
+import logging
+import re
 from typing import Any
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from ai.gemini_client import GeminiClient
+from ai.gemini_client import GeminiClient, GeminiUnavailableError, GeminiRateLimitError
 from ai.validators.practice_items import DraftItem, to_row
 from backend.app.core.config import settings
 from backend.app.core.security import get_current_user
 from backend.app.db.session import SessionLocal, get_db
-from backend.app.models.core import Assessment, Concept, Question, User
+from backend.app.models.core import (
+    Assessment,
+    CareerTarget,
+    Concept,
+    LearnerProfile,
+    Question,
+    Skill,
+    Topic,
+    User,
+)
 
+logger = logging.getLogger("palp.api.ai")
 router = APIRouter()
-gemini_client = GeminiClient(api_key=settings.GEMINI_API_KEY, session_factory=SessionLocal)
+
+gemini_client = GeminiClient(
+    api_key=settings.GEMINI_API_KEY,
+    model_name=settings.GEMINI_MODEL,
+    session_factory=SessionLocal,
+)
 
 SCORED_ASSESSMENT_TYPES = {"initial", "special", "verification", "followup"}
 
@@ -43,6 +60,127 @@ def assert_not_in_scored_test(user_id: int, db: Session) -> None:
                 f"({active_test.type}) to preserve assessment validity and prevent answer leakage."
             ),
         )
+
+
+def resolve_syllabus_context(
+    db: Session,
+    user_id: int,
+    concept_id: int | None,
+    user_message: str,
+) -> tuple[str, str, list[int]]:
+    """Resolves curriculum topic and syllabus metadata grounded STRICTLY in user's active career target.
+    Never injects concepts or topics from other tracks (e.g. ML) into a Banking user's prompt.
+    Returns: (topic_name, syllabus_metadata, injected_topic_ids)
+    """
+    profile = db.execute(
+        select(LearnerProfile).where(LearnerProfile.user_id == user_id)
+    ).scalar_one_or_none()
+    target_id = profile.target_id if profile else 1
+    target = db.get(CareerTarget, target_id)
+    target_title = target.name if target else "General Syllabus"
+
+    # 1. If explicit concept_id is provided, verify it strictly belongs to user's target!
+    if concept_id:
+        c = db.get(Concept, concept_id)
+        if c and c.topic and c.topic.skill and c.topic.skill.target_id == target_id:
+            topic = c.topic
+            skill = topic.skill
+            topic_name = topic.name
+            meta = (
+                f"Career Target: {target_title}. Skill Domain: {skill.name}. "
+                f"Topic: {topic_name}. Concept: {c.name}. Syllabus context: {c.description or 'Core syllabus concept'}."
+            )
+            return topic_name, meta, [topic.id]
+
+    query_lower = user_message.lower()
+    query_tokens = set(re.findall(r"\w+", query_lower))
+    common_stopwords = {
+        "explain", "what", "is", "are", "the", "a", "an", "and", "or", "in", "for", "to",
+        "of", "about", "how", "tell", "me", "details", "give", "some", "can", "you", "help"
+    }
+    meaningful_tokens = query_tokens - common_stopwords
+
+    # 2. Match concepts strictly in target curriculum
+    concepts_rows = db.execute(
+        select(Concept, Topic, Skill)
+        .join(Topic, Concept.topic_id == Topic.id)
+        .join(Skill, Topic.skill_id == Skill.id)
+        .where(Skill.target_id == target_id)
+    ).all()
+
+    best_concept = None
+    best_concept_score = 0
+    for c, topic, skill in concepts_rows:
+        c_lower = c.name.lower()
+        t_lower = topic.name.lower()
+        score = 0
+        if c_lower in query_lower or query_lower in c_lower:
+            score += 10
+        if t_lower in query_lower or query_lower in t_lower:
+            score += 8
+        c_tokens = set(re.findall(r"\w+", c_lower)) - common_stopwords
+        t_tokens = set(re.findall(r"\w+", t_lower)) - common_stopwords
+        concept_words = c_tokens | t_tokens
+        overlap = 0
+        for qw in meaningful_tokens:
+            for cw in concept_words:
+                if qw == cw or (len(qw) >= 4 and len(cw) >= 4 and (qw.startswith(cw) or cw.startswith(qw))):
+                    overlap += 1
+        score += overlap * 3
+        if score > best_concept_score:
+            best_concept_score = score
+            best_concept = (c, topic, skill)
+
+    if best_concept and best_concept_score >= 3:
+        c, topic, skill = best_concept
+        meta = (
+            f"Career Target: {target_title}. Domain: {skill.name}. "
+            f"Topic: {topic.name}. Concept: {c.name}. Syllabus context: {c.description or 'Core syllabus concept in ' + target_title}."
+        )
+        return topic.name, meta, [topic.id]
+
+    # 3. Match skill domain strictly in target curriculum (e.g. 'Quantitative Aptitude' for 'aptitude')
+    skills_rows = db.execute(
+        select(Skill).where(Skill.target_id == target_id)
+    ).scalars().all()
+
+    best_skill = None
+    best_skill_score = 0
+    for s in skills_rows:
+        s_lower = s.name.lower()
+        s_tokens = set(re.findall(r"\w+", s_lower)) - common_stopwords
+        overlap = len(s_tokens & meaningful_tokens)
+        score = 0
+        if any(word in s_lower for word in meaningful_tokens if len(word) >= 4):
+            score += 6
+        score += overlap * 3
+        if score > best_skill_score:
+            best_skill_score = score
+            best_skill = s
+
+    if best_skill and best_skill_score >= 3:
+        # Find primary foundational topics under this skill
+        topics_in_skill = db.execute(
+            select(Topic).where(Topic.skill_id == best_skill.id).order_by(Topic.id)
+        ).scalars().all()
+        topic_name = topics_in_skill[0].name if topics_in_skill else best_skill.name
+        topic_ids = [t.id for t in topics_in_skill]
+        meta = (
+            f"Career Target: {target_title}. Skill Domain: {best_skill.name} (Exam weight: {best_skill.weight}). "
+            f"Relevant Topics: {', '.join(t.name for t in topics_in_skill[:3])}. "
+            f"Syllabus Context: Foundational syllabus area for {target_title}."
+        )
+        return topic_name, meta, topic_ids
+
+    # 4. No confident match within target syllabus
+    # General response stating syllabus scope, NEVER injecting concepts from other tracks
+    skills_summary = ", ".join(f"{s.name}" for s in skills_rows)
+    meta = (
+        f"Career Target: {target_title}. Syllabus Structure: {skills_summary}. "
+        f"Note: The user's query is broad and does not match a single narrow concept in {target_title}. "
+        f"Answer generally from the perspective of the {target_title} curriculum without forcing any unrelated track topic."
+    )
+    return f"{target_title} General Syllabus", meta, []
 
 
 class AskIn(BaseModel):
@@ -72,25 +210,69 @@ def ask_gemini(
     """Conversational assistant for study context. Strictly disabled during scored tests."""
     assert_not_in_scored_test(current_user.id, db)
 
-    concept_name = "General Syllabus"
-    concept_desc = "Adaptive Learning Journey"
-    if req.concept_id:
-        c = db.get(Concept, req.concept_id)
-        if c:
-            concept_name = c.name
-            concept_desc = c.description or ""
+    topic_name, syllabus_metadata, injected_topic_ids = resolve_syllabus_context(
+        db, current_user.id, req.concept_id, req.message
+    )
+
+    profile = db.execute(
+        select(LearnerProfile).where(LearnerProfile.user_id == current_user.id)
+    ).scalar_one_or_none()
+    target_id = profile.target_id if profile else 1
+    target = db.get(CareerTarget, target_id)
+    target_name = target.name if target else "General"
+
+    logger.info(
+        "AI Chatbot: user_id=%s, target='%s', injected_topic_ids=%s, topic_name='%s', query='%s'",
+        current_user.id,
+        target_name,
+        injected_topic_ids,
+        topic_name,
+        req.message,
+    )
 
     ctx = {
-        "concept_name": concept_name,
-        "concept_description": concept_desc,
-        "mastery_score": "In Progress",
+        "topic_name": topic_name,
+        "syllabus_metadata": syllabus_metadata,
+        "user_message": req.message,
     }
-    reply = gemini_client.call("concept_explanation", ctx, user_id=current_user.id)
+
+    if not settings.GEMINI_CHATBOT_ENABLED:
+        return {
+            "reply": "AI Chatbot is currently disabled in system configuration.",
+            "label": "Notice",
+            "topic_name": topic_name,
+            "injected_topic_ids": injected_topic_ids,
+            "context_chip": f"{topic_name} ({req.page_context or 'Dashboard'})",
+        }
+
+    if not settings.GEMINI_API_KEY or settings.GEMINI_API_KEY == "your_gemini_api_key_here":
+        return {
+            "reply": f"AI Assistant is unconfigured (GEMINI_API_KEY is not set). Topic context: {topic_name}. Please configure GEMINI_API_KEY in .env to enable live AI responses.",
+            "label": "Notice",
+            "topic_name": topic_name,
+            "injected_topic_ids": injected_topic_ids,
+            "context_chip": f"{topic_name} ({req.page_context or 'Dashboard'})",
+        }
+
+    try:
+        reply = gemini_client.call("tutor_chat", ctx, user_id=current_user.id)
+    except GeminiRateLimitError:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="AI is busy, retry in about 1 minute",
+        )
+    except GeminiUnavailableError:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="AI assistant unavailable, retry",
+        )
 
     return {
         "reply": reply,
         "label": "AI-generated",
-        "context_chip": f"{concept_name} ({req.page_context or 'Dashboard'})",
+        "topic_name": topic_name,
+        "injected_topic_ids": injected_topic_ids,
+        "context_chip": f"{topic_name} ({req.page_context or 'Dashboard'})",
     }
 
 
@@ -112,7 +294,13 @@ def explain_concept(
         "concept_description": concept.description or f"Principles of {concept.name}",
         "mastery_score": "Current Syllabus Level",
     }
-    explanation = gemini_client.call("concept_explanation", ctx, user_id=current_user.id)
+    try:
+        explanation = gemini_client.call("concept_explanation", ctx, user_id=current_user.id)
+    except GeminiUnavailableError:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="AI assistant unavailable, retry",
+        )
 
     return {
         "concept_id": concept.id,
@@ -142,7 +330,13 @@ def generate_feedback(
         "mean_time_ratio": "1.12",
         "weak_concepts": "Diagnosed prerequisite nodes",
     }
-    feedback = gemini_client.call("performance_feedback", ctx, user_id=current_user.id)
+    try:
+        feedback = gemini_client.call("performance_feedback", ctx, user_id=current_user.id)
+    except GeminiUnavailableError:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="AI assistant unavailable, retry",
+        )
 
     return {
         "assessment_id": assessment.id,
@@ -172,7 +366,13 @@ def generate_practice_question(
         "concept_description": concept.description or f"Fundamentals of {concept.name}",
         "difficulty_level": concept.difficulty_level,
     }
-    raw_json = gemini_client.call("practice_generation", ctx, user_id=current_user.id)
+    try:
+        raw_json = gemini_client.call("practice_generation", ctx, user_id=current_user.id)
+    except GeminiUnavailableError:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="AI assistant unavailable, retry",
+        )
 
     # Parse and validate with DraftItem
     try:
@@ -184,19 +384,11 @@ def generate_practice_question(
             correct_answer=data["correct_answer"],
             explanation=data["explanation"],
         )
-    except Exception:
-        # Fallback to valid default draft
-        draft = DraftItem(
-            concept_id=concept.id,
-            question_text=f"Which principle governs the core operational mechanism of {concept.name}?",
-            options={
-                "A": f"It enforces primary prerequisite constraints for {concept.name}.",
-                "B": "It accelerates secondary evaluation routines.",
-                "C": "It isolates external system states unconditionally.",
-                "D": "It replaces runtime exceptions with default fallbacks.",
-            },
-            correct_answer="A",
-            explanation=f"By formal design, {concept.name} establishes structural invariant constraints.",
+    except Exception as e:
+        logger.exception("Failed to parse Gemini practice JSON response: %s", e)
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="Generated practice item format invalid, retry",
         )
 
     row_data = to_row(draft, difficulty_b=0.0)

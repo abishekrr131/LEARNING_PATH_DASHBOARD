@@ -46,6 +46,11 @@ palp_local.db
 
 # Environment & IDE
 .env
+.env.*
+!.env.example
+*.env
+backend/.env
+frontend/.env
 .idea/
 .vscode/
 *.swp

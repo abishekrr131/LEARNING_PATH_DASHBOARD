@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
+import { toOptionList } from "../utils/options";
 
 /**
  * Captures the exact behaviour signal the RCT-GAT model is built on.
@@ -8,7 +9,14 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
  *   3. Treats a skip as its own event, never as a wrong answer.
  *   4. Sends NO client timestamp. The server assigns answered_at for chronological ordering.
  */
-export default function AssessmentRunner({ assessmentId, items, onSubmitted, title = "Assessment" }) {
+export default function AssessmentRunner({
+  assessmentId,
+  items,
+  onSubmitted,
+  onSubmit,
+  submitEndpoint,
+  title = "Assessment",
+}) {
   const [index, setIndex] = useState(0);
   const [responses, setResponses] = useState([]);
   const [selected, setSelected] = useState(null);
@@ -79,7 +87,21 @@ export default function AssessmentRunner({ assessmentId, items, onSubmitted, tit
   useEffect(() => {
     if (!done || responses.length !== items.length || submitting) return;
     setSubmitting(true);
-    fetch(`/api/assessments/${assessmentId}/submit`, {
+
+    if (onSubmit) {
+      Promise.resolve(onSubmit(responses))
+        .then((res) => {
+          onSubmitted(res);
+        })
+        .catch((err) => {
+          console.error("Submission failed", err);
+          setSubmitting(false);
+        });
+      return;
+    }
+
+    const endpoint = submitEndpoint || `/api/assessments/${assessmentId}/submit`;
+    fetch(endpoint, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -95,7 +117,7 @@ export default function AssessmentRunner({ assessmentId, items, onSubmitted, tit
         console.error("Submission failed", err);
         setSubmitting(false);
       });
-  }, [done, responses, items.length, assessmentId, onSubmitted, submitting]);
+  }, [done, responses, items.length, assessmentId, onSubmitted, onSubmit, submitEndpoint, submitting]);
 
   if (done) {
     return (
@@ -116,10 +138,26 @@ export default function AssessmentRunner({ assessmentId, items, onSubmitted, tit
       {/* Header & Progress */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <span className="text-xs font-semibold uppercase tracking-wider text-purple-600 dark:text-purple-400">
-            {title} · {item.concept_name}
-          </span>
-          <h2 className="text-sm font-medium text-gray-500 dark:text-gray-400">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-xs font-semibold uppercase tracking-wider text-purple-600 dark:text-purple-400">
+              {title} · {item.concept_name}
+            </span>
+            <span
+              className={`px-2 py-0.5 rounded-full font-medium text-[10px] ${
+                item.source === "gemini"
+                  ? "bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300 border border-purple-200 dark:border-purple-800"
+                  : "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800"
+              }`}
+            >
+              {item.source === "gemini" ? "✨ AI-Generated" : "📚 Question Bank"}
+            </span>
+          </div>
+          {item.source_title && (
+            <div className="text-[11px] text-gray-500 dark:text-gray-400 mt-1">
+              <strong>Source:</strong> {item.source_title} {item.exam_year ? `(${item.exam_year})` : ""}
+            </div>
+          )}
+          <h2 className="text-sm font-medium text-gray-500 dark:text-gray-400 mt-0.5">
             Question {index + 1} of {items.length}
           </h2>
         </div>
@@ -138,17 +176,17 @@ export default function AssessmentRunner({ assessmentId, items, onSubmitted, tit
 
       {/* Question Text */}
       <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-6 leading-relaxed">
-        {item.question_text}
+        {item.question_text || item.stem || item.text}
       </h3>
 
       {/* Options */}
       <div className="space-y-3 mb-8">
-        {Object.entries(item.options).map(([key, text]) => {
-          const isSelected = selected === key;
+        {toOptionList(item.options).map((opt) => {
+          const isSelected = selected === opt.key;
           return (
             <label
-              key={key}
-              onClick={() => setSelected(key)}
+              key={opt.key}
+              onClick={() => setSelected(opt.key)}
               className={`flex items-start p-4 rounded-xl border cursor-pointer transition-all ${
                 isSelected
                   ? "border-purple-600 bg-purple-50/50 dark:bg-purple-900/20 text-purple-950 dark:text-purple-100 shadow-sm"
@@ -162,9 +200,9 @@ export default function AssessmentRunner({ assessmentId, items, onSubmitted, tit
                     : "bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300"
                 }`}
               >
-                {key}
+                {opt.key}
               </div>
-              <span className="text-sm leading-relaxed">{text}</span>
+              <span className="text-sm leading-relaxed">{opt.text}</span>
             </label>
           );
         })}

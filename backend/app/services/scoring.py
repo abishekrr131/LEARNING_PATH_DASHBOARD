@@ -130,6 +130,23 @@ def adaptive_priority(
     return gap * urgency * relevance
 
 
+def priority_score(
+    gap: float,
+    skill_weight: float,
+    days_to_exam: int | float = 60,
+    dag_distance: int = 0,
+    horizon: float = 120.0,
+) -> float:
+    """Formula 14 adaptive priority calculation alias."""
+    return adaptive_priority(
+        gap=gap,
+        days_to_target=days_to_exam,
+        skill_weight=skill_weight,
+        dag_distance=dag_distance,
+        horizon=horizon,
+    )
+
+
 def mastery_decay(
     m0: float,
     elapsed_days: float,
@@ -198,3 +215,189 @@ def readiness_score(
             m_s = item["mean_mastery"]
         total += w_s * m_s
     return total
+
+
+def calculate_coverage_readiness(
+    db: Any,
+    user_id: int,
+    target_id: int,
+) -> dict[str, Any]:
+    """Calculates coverage-based readiness (Formula 17):
+    - Skill readiness = demonstrated_topics / total_topics_in_skill
+    - Overall readiness = sum(skill_weight * skill_readiness)
+    - If total_attempts == 0 -> label "Not assessed yet", score None
+    - If completed_weekly_tests < 3 -> label "Provisional estimate"
+    - If completed_weekly_tests >= 3 -> label "Calibrated estimate"
+    """
+    from sqlalchemy import select, func
+    from backend.app.models.core import (
+        Assessment,
+        CareerTarget,
+        Concept,
+        Question,
+        Skill,
+        StudentMastery,
+        StudentResponse,
+        Topic,
+    )
+
+    target = db.get(CareerTarget, target_id)
+    threshold = target.readiness_threshold if target else 0.70
+
+    skills = db.execute(
+        select(Skill).where(Skill.target_id == target_id).order_by(Skill.id)
+    ).scalars().all()
+
+    # Total user attempts across assessments
+    total_attempts = db.execute(
+        select(func.count(StudentResponse.id)).where(StudentResponse.user_id == user_id)
+    ).scalar() or 0
+
+    # Count completed weekly tests
+    completed_weekly_tests = db.execute(
+        select(func.count(Assessment.id)).where(
+            Assessment.user_id == user_id,
+            Assessment.type.in_(["weekly", "weekly_test"]),
+            Assessment.completed_at.is_not(None),
+        )
+    ).scalar() or 0
+
+    if total_attempts == 0:
+        skill_components = []
+        for s in skills:
+            concepts = db.execute(
+                select(Concept.id)
+                .join(Topic, Concept.topic_id == Topic.id)
+                .where(Topic.skill_id == s.id)
+            ).scalars().all()
+            total_count = len(concepts)
+            skill_components.append({
+                "skill_id": s.id,
+                "skill_name": s.name,
+                "weight": s.weight,
+                "demonstrated_topics": 0,
+                "total_topics": total_count,
+                "skill_readiness": 0.0,
+                "mean_mastery": 0.0,
+                "skill_percentage": 0,
+                "progress_text": f"0 of {total_count} topics demonstrated",
+            })
+        return {
+            "target_id": target_id,
+            "target_name": target.name if target else "Unknown",
+            "readiness_score": 0.0,
+            "readiness_percentage": 0,
+            "readiness_threshold": threshold,
+            "is_ready": False,
+            "is_assessed": False,
+            "total_attempts": 0,
+            "completed_weekly_tests": 0,
+            "label": "Take the Initial Diagnostic",
+            "skill_components": skill_components,
+        }
+
+    # Find demonstrated concepts: answered correctly in StudentResponse or mastery >= 0.60
+    correct_concept_ids = set(
+        db.execute(
+            select(Question.concept_id)
+            .join(StudentResponse, StudentResponse.question_id == Question.id)
+            .where(
+                StudentResponse.user_id == user_id,
+                StudentResponse.is_correct.is_(True),
+            )
+        ).scalars().all()
+    )
+
+    high_mastery_ids = set(
+        db.execute(
+            select(StudentMastery.concept_id).where(
+                StudentMastery.user_id == user_id,
+                StudentMastery.mastery_score >= 0.60,
+            )
+        ).scalars().all()
+    )
+
+    demonstrated_ids = correct_concept_ids | high_mastery_ids
+
+    skill_components = []
+    overall_readiness = 0.0
+
+    for s in skills:
+        concepts = db.execute(
+            select(Concept.id)
+            .join(Topic, Concept.topic_id == Topic.id)
+            .where(Topic.skill_id == s.id)
+        ).scalars().all()
+
+        total_count = len(concepts)
+        demonstrated_in_skill = sum(1 for cid in concepts if cid in demonstrated_ids)
+        skill_readiness = (demonstrated_in_skill / total_count) if total_count > 0 else 0.0
+
+        overall_readiness += s.weight * skill_readiness
+
+        skill_components.append({
+            "skill_id": s.id,
+            "skill_name": s.name,
+            "weight": s.weight,
+            "demonstrated_topics": demonstrated_in_skill,
+            "total_topics": total_count,
+            "skill_readiness": round(skill_readiness, 4),
+            "mean_mastery": round(skill_readiness, 4),
+            "skill_percentage": round(skill_readiness * 100.0, 1),
+            "progress_text": f"{demonstrated_in_skill} of {total_count} topics demonstrated",
+        })
+
+    # Count distinct topics demonstrated across entire syllabus
+    all_target_topics = db.execute(
+        select(Topic.id)
+        .join(Skill, Topic.skill_id == Skill.id)
+        .where(Skill.target_id == target_id)
+    ).scalars().all()
+    total_syllabus_topics = len(all_target_topics)
+
+    demonstrated_topics_set = set(
+        db.execute(
+            select(Topic.id)
+            .join(Concept, Concept.topic_id == Topic.id)
+            .where(Concept.id.in_(list(demonstrated_ids)))
+        ).scalars().all()
+    ) if demonstrated_ids else set()
+
+    demonstrated_topics_count = len(demonstrated_topics_set)
+    topic_coverage_readiness_pct = (
+        round((demonstrated_topics_count / total_syllabus_topics) * 100.0, 1)
+        if total_syllabus_topics > 0
+        else 0.0
+    )
+
+    if total_attempts == 0:
+        learning_stage = "Unassessed"
+    elif topic_coverage_readiness_pct < 25.0:
+        learning_stage = "Foundation Stage"
+    elif topic_coverage_readiness_pct < 50.0:
+        learning_stage = "Developing Stage"
+    elif topic_coverage_readiness_pct < 75.0:
+        learning_stage = "Proficient Stage"
+    else:
+        learning_stage = "Career Ready"
+
+    label = "Calibrated estimate" if completed_weekly_tests >= 3 else "Provisional estimate"
+    is_ready = bool(overall_readiness >= threshold)
+
+    return {
+        "target_id": target_id,
+        "target_name": target.name if target else "Unknown",
+        "readiness_score": round(overall_readiness, 4),
+        "readiness_percentage": round(overall_readiness * 100.0, 1),
+        "topic_coverage_readiness_pct": topic_coverage_readiness_pct,
+        "learning_stage": learning_stage,
+        "demonstrated_topics_count": demonstrated_topics_count,
+        "total_syllabus_topics": total_syllabus_topics,
+        "readiness_threshold": threshold,
+        "is_ready": is_ready,
+        "is_assessed": True,
+        "total_attempts": total_attempts,
+        "completed_weekly_tests": completed_weekly_tests,
+        "label": label,
+        "skill_components": skill_components,
+    }

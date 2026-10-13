@@ -58,7 +58,7 @@ export default function Onboarding() {
       });
 
       await refreshProfile();
-      navigate("/instructions");
+      navigate("/diagnostic/instructions");
     } catch (err) {
       setError(err.message || "Failed to save onboarding configuration.");
       setSubmitting(false);

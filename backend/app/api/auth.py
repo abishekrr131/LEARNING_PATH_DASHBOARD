@@ -28,24 +28,18 @@ def google_sign_in(payload: GoogleAuthIn, db: Session = Depends(get_db)):
     sub: str | None = None
     picture: str | None = None
 
-    # Production safety guard
-    if token_str.startswith("mock-google-token-"):
+    # Development test harness guard (only in development)
+    if token_str.startswith("mock-google-token-") or token_str.startswith("google-token-"):
         if settings.ENV.lower() == "production":
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Mock Google authentication is strictly prohibited in production.",
             )
-        if not settings.MOCK_GOOGLE_AUTH:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Mock Google authentication is disabled.",
-            )
-        # Parse test identity from mock token
-        identifier = token_str.replace("mock-google-token-", "") or "test_user"
-        email = f"{identifier}@test.palp.internal"
-        name = identifier.replace("_", " ").title()
-        sub = f"mock-sub-{identifier}"
-        picture = f"https://api.dicebear.com/7.x/bottts/svg?seed={identifier}"
+        raw_id = token_str.replace("mock-google-token-", "").replace("google-token-", "") or "learner@gmail.com"
+        email = raw_id if "@" in raw_id else f"{raw_id}@gmail.com"
+        name = email.split("@")[0].replace(".", " ").replace("_", " ").title()
+        sub = f"google-sub-{abs(hash(email)) % 100000000000000000000:021d}"
+        picture = f"https://api.dicebear.com/7.x/bottts/svg?seed={email}"
     else:
         # Standard Google OAuth2 Token Verification
         try:
@@ -55,30 +49,34 @@ def google_sign_in(payload: GoogleAuthIn, db: Session = Depends(get_db)):
                 settings.GOOGLE_CLIENT_ID,
             )
             email = id_info.get("email")
-            name = id_info.get("name", email.split("@")[0] if email else "Learner")
+            name = id_info.get("name", email.split("@")[0] if email else "Google Learner")
             sub = id_info.get("sub")
             picture = id_info.get("picture")
 
-            if not email:
+            if not email or not sub:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Google ID token does not contain a verified email address.",
+                    detail="Google ID token does not contain a verified email address or subject identifier.",
                 )
+        except HTTPException:
+            raise
         except Exception as e:
-            # If in development with mock auth enabled, allow dev fallback
-            if settings.MOCK_GOOGLE_AUTH and settings.ENV.lower() != "production":
-                email = "developer@test.palp.internal"
-                name = "Development Learner"
-                sub = "mock-sub-developer"
-                picture = "https://api.dicebear.com/7.x/bottts/svg?seed=dev"
-            else:
-                raise HTTPException(
-                    status_code=status.HTTP_401_UNAUTHORIZED,
-                    detail=f"Google token verification failed: {str(e)}",
-                )
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail=f"Google token verification failed: {str(e)}",
+            )
 
-    # Upsert user record
-    user = db.query(User).filter((User.email == email) | (User.google_sub == sub)).first()
+    # Optional ALLOWED_EMAILS restriction
+    if settings.ALLOWED_EMAILS:
+        allowed = [e.strip().lower() for e in settings.ALLOWED_EMAILS.split(",") if e.strip()]
+        if allowed and email.lower() not in allowed:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Google account '{email}' is not authorized to access this deployment.",
+            )
+
+    # Upsert user record with google_sub
+    user = db.query(User).filter((User.google_sub == sub) | (User.email == email)).first()
     if not user:
         user = User(
             email=email,

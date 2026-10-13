@@ -133,6 +133,9 @@ export default function SettingsProfile() {
                   </option>
                 ))}
               </select>
+              <p className="text-[11px] text-amber-600 dark:text-amber-400 mt-1.5 flex items-center gap-1 font-medium">
+                ⚠️ Changing your target shifts active study focus; roadmap and diagnostic progress are tracked independently per curriculum target.
+              </p>
             </div>
 
             <div>

@@ -18,7 +18,8 @@ def create_access_token(data: dict[str, Any], expires_delta: dt.timedelta | None
         expires_delta or dt.timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     )
     to_encode.update({"exp": expire, "type": "access"})
-    return jwt.encode(to_encode, settings.JWT_SECRET, algorithm=settings.JWT_ALGORITHM)
+    secret = settings.SECRET_KEY or settings.JWT_SECRET
+    return jwt.encode(to_encode, secret, algorithm=settings.JWT_ALGORITHM)
 
 
 def create_refresh_token(data: dict[str, Any], expires_delta: dt.timedelta | None = None) -> str:
@@ -27,12 +28,14 @@ def create_refresh_token(data: dict[str, Any], expires_delta: dt.timedelta | Non
         expires_delta or dt.timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
     )
     to_encode.update({"exp": expire, "type": "refresh"})
-    return jwt.encode(to_encode, settings.JWT_SECRET, algorithm=settings.JWT_ALGORITHM)
+    secret = settings.SECRET_KEY or settings.JWT_SECRET
+    return jwt.encode(to_encode, secret, algorithm=settings.JWT_ALGORITHM)
 
 
 def decode_token(token: str) -> dict[str, Any]:
     try:
-        payload = jwt.decode(token, settings.JWT_SECRET, algorithms=[settings.JWT_ALGORITHM])
+        secret = settings.SECRET_KEY or settings.JWT_SECRET
+        payload = jwt.decode(token, secret, algorithms=[settings.JWT_ALGORITHM])
         return payload
     except JWTError:
         raise HTTPException(

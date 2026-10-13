@@ -243,53 +243,55 @@ def test_special_test_mode_flow(client: TestClient, auth_headers, db_session):
 
 
 def test_gemini_scored_test_suppression(client: TestClient, auth_headers, db_session):
+    from unittest.mock import patch
     headers, user = auth_headers
 
     target = CareerTarget(name="Target Suppression", category="it_career")
     db_session.add(target)
     db_session.commit()
 
-    # 1. No active test -> Ask Gemini works
-    res_ask = client.post(
-        "/api/ai/ask",
-        headers=headers,
-        json={"message": "Explain linear regression"},
-    )
-    assert res_ask.status_code == 200
-    assert res_ask.json()["label"] == "AI-generated"
+    with patch("backend.app.api.ai.gemini_client.call", return_value="Linear regression models relationships..."):
+        # 1. No active test -> Ask Gemini works
+        res_ask = client.post(
+            "/api/ai/ask",
+            headers=headers,
+            json={"message": "Explain linear regression"},
+        )
+        assert res_ask.status_code == 200
+        assert res_ask.json()["label"] == "AI-generated"
 
-    # 2. Start a scored test (e.g. initial diagnostic)
-    test_assessment = Assessment(
-        user_id=user.id,
-        type="initial",
-        target_id=target.id,
-        started_at=dt.datetime.now(dt.timezone.utc),
-        completed_at=None,
-    )
-    db_session.add(test_assessment)
-    db_session.commit()
+        # 2. Start a scored test (e.g. initial diagnostic)
+        test_assessment = Assessment(
+            user_id=user.id,
+            type="initial",
+            target_id=target.id,
+            started_at=dt.datetime.now(dt.timezone.utc),
+            completed_at=None,
+        )
+        db_session.add(test_assessment)
+        db_session.commit()
 
-    # 3. Check active test endpoint
-    res_active = client.get("/api/assessments/active", headers=headers)
-    assert res_active.status_code == 200
-    assert res_active.json()["has_active_test"] is True
+        # 3. Check active test endpoint
+        res_active = client.get("/api/assessments/active", headers=headers)
+        assert res_active.status_code == 200
+        assert res_active.json()["has_active_test"] is True
 
-    # 4. Attempt to call Gemini -> MUST BE REFUSED WITH 403 FORBIDDEN
-    res_blocked = client.post(
-        "/api/ai/ask",
-        headers=headers,
-        json={"message": "What is the answer to question 1?"},
-    )
-    assert res_blocked.status_code == 403
-    assert "strictly disabled during active scored tests" in res_blocked.json()["detail"]
+        # 4. Attempt to call Gemini -> MUST BE REFUSED WITH 403 FORBIDDEN
+        res_blocked = client.post(
+            "/api/ai/ask",
+            headers=headers,
+            json={"message": "What is the answer to question 1?"},
+        )
+        assert res_blocked.status_code == 403
+        assert "strictly disabled during active scored tests" in res_blocked.json()["detail"]
 
-    # 5. Complete test -> AI becomes available again
-    test_assessment.completed_at = dt.datetime.now(dt.timezone.utc)
-    db_session.commit()
+        # 5. Complete test -> AI becomes available again
+        test_assessment.completed_at = dt.datetime.now(dt.timezone.utc)
+        db_session.commit()
 
-    res_restored = client.post(
-        "/api/ai/ask",
-        headers=headers,
-        json={"message": "Now that test is finished, explain the concept."},
-    )
-    assert res_restored.status_code == 200
+        res_restored = client.post(
+            "/api/ai/ask",
+            headers=headers,
+            json={"message": "Now that test is finished, explain the concept."},
+        )
+        assert res_restored.status_code == 200

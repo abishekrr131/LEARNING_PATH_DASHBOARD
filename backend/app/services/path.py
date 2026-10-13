@@ -34,6 +34,8 @@ def insert_remediation(
     """
     if surface_id not in path:
         return path
+    if surface_id == root_cause_id:
+        return list(path)
 
     surface_index = path.index(surface_id)
     # If root_cause_id is already in path and scheduled before surface_id:
@@ -61,8 +63,11 @@ def topological_order(graph: Any, concept_ids: list[int]) -> list[int]:
     
     # Topological sort of the subgraph nodes
     ordered = topological_sort(sub)
+    ordered_set = set(ordered)
     # Ensure all original nodes are returned
-    return [c for c in ordered if c in set(concept_ids)]
+    result = [c for c in ordered if c in set(concept_ids)]
+    missing = [c for c in concept_ids if c not in ordered_set]
+    return result + missing
 
 
 def build_curriculum_path(
@@ -114,3 +119,45 @@ def build_curriculum_path(
         })
 
     return path_items
+
+
+def build_personalized_path(
+    g: Any,
+    concept_names: dict[int, str],
+    weak_concept_ids: list[int],
+    remediation_prereq_ids: list[int] | None = None,
+    limit: int = 15,
+) -> list[dict[str, Any]]:
+    """Builds a personalized topological roadmap prioritizing weak concepts and root cause prerequisites."""
+    all_nodes = list(concept_names.keys())
+    if not all_nodes:
+        return []
+
+    try:
+        ordered = topological_order(g, all_nodes)
+    except Exception:
+        ordered = all_nodes
+
+    remediation_set = set(remediation_prereq_ids or [])
+    weak_set = set(weak_concept_ids)
+
+    # Insert remediations before surface concepts
+    if remediation_prereq_ids and weak_concept_ids:
+        for s_id in weak_concept_ids:
+            for r_id in remediation_prereq_ids:
+                if s_id != r_id and s_id in ordered and r_id in ordered:
+                    ordered = insert_remediation(ordered, s_id, r_id, g)
+
+    nodes_out = []
+    for idx, cid in enumerate(ordered[:limit]):
+        is_rem = cid in remediation_set
+        is_weak = cid in weak_set
+        nodes_out.append({
+            "concept_id": cid,
+            "concept_name": concept_names.get(cid, f"Concept {cid}"),
+            "step_order": idx + 1,
+            "is_remediation": is_rem,
+            "is_weak": is_weak,
+            "status": "remediation" if is_rem else ("priority" if is_weak else "standard"),
+        })
+    return nodes_out

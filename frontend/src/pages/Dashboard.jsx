@@ -28,7 +28,21 @@ export default function Dashboard() {
     });
   }, []);
 
-  const topWeak = gaps.slice(0, 3);
+  const topWeak = (gaps || [])
+    .filter((g) => g.status !== "unassessed" && g.priority != null && g.gap_score != null)
+    .slice(0, 3);
+
+  if (loading) {
+    return (
+      <MainLayout>
+        <div className="flex flex-col items-center justify-center p-20 text-center">
+          <div className="w-12 h-12 border-4 border-purple-600 border-t-transparent rounded-full animate-spin mb-4" />
+          <h3 className="font-bold text-gray-900 dark:text-white">Loading your dashboard…</h3>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Retrieving competency state and syllabus progress.</p>
+        </div>
+      </MainLayout>
+    );
+  }
 
   return (
     <MainLayout>
@@ -67,50 +81,69 @@ export default function Dashboard() {
         {/* 3-Column Metrics Overview */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* 1. Readiness Score Card (F17) */}
-          <div className="p-6 rounded-3xl bg-white dark:bg-gray-900 border border-purple-100 dark:border-purple-900/40 shadow-xl shadow-purple-500/5">
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-xs font-bold uppercase tracking-wider text-purple-600 dark:text-purple-400">
-                Exam Readiness (F17)
-              </span>
-              <span className="text-[10px] italic text-gray-400">
-                estimate, not guarantee
-              </span>
-            </div>
+          <div className="p-6 rounded-3xl bg-white dark:bg-gray-900 border border-purple-100 dark:border-purple-900/40 shadow-xl shadow-purple-500/5 flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-xs font-bold uppercase tracking-wider text-purple-600 dark:text-purple-400">
+                  Exam Readiness (F17)
+                </span>
+                <span className="text-[10px] italic text-gray-400">
+                  {readiness?.label || "Provisional estimate"}
+                </span>
+              </div>
 
-            <div className="flex items-baseline space-x-2">
-              <span className="text-4xl font-black text-gray-900 dark:text-white">
-                {readiness ? `${readiness.readiness_percentage}%` : "--%"}
-              </span>
-              <span className="text-xs text-gray-400">
-                / Threshold {readiness ? `${Math.round(readiness.readiness_threshold * 100)}%` : "75%"}
-              </span>
-            </div>
+              <div className="flex items-baseline space-x-2">
+                <span className="text-4xl font-black text-gray-900 dark:text-white">
+                  {readiness?.readiness_percentage != null ? `${readiness.readiness_percentage}%` : "0%"}
+                </span>
+                <span className="text-xs text-gray-400">
+                  / Threshold {Math.round((readiness?.readiness_threshold || 0.70) * 100)}%
+                </span>
+              </div>
 
-            <div className="w-full bg-gray-100 dark:bg-gray-800 h-2.5 rounded-full overflow-hidden my-4">
-              <div
-                className="bg-gradient-to-r from-purple-500 to-indigo-600 h-full rounded-full transition-all duration-700"
-                style={{ width: `${readiness?.readiness_percentage || 0}%` }}
-              />
-            </div>
+              <div className="w-full bg-gray-100 dark:bg-gray-800 h-2.5 rounded-full overflow-hidden my-4">
+                <div
+                  className="bg-gradient-to-r from-purple-500 to-indigo-600 h-full rounded-full transition-all duration-700"
+                  style={{ width: `${readiness?.readiness_percentage || 0}%` }}
+                />
+              </div>
 
-            {/* Skill weights breakdown */}
-            <div className="space-y-2 mt-4 pt-3 border-t border-gray-100 dark:border-gray-800">
-              {readiness?.skill_components?.slice(0, 3).map((sk) => (
-                <div key={sk.skill_id} className="flex justify-between items-center text-xs">
-                  <span className="text-gray-500 dark:text-gray-400 truncate max-w-[140px]">{sk.skill_name}</span>
-                  <span className="font-mono font-bold text-gray-700 dark:text-gray-300">
-                    {Math.round(sk.mean_mastery * 100)}% (w: {sk.weight})
-                  </span>
+              {!readiness?.is_assessed && (
+                <div className="mb-4 p-3 rounded-xl bg-purple-50 dark:bg-purple-950/40 border border-purple-100 dark:border-purple-900/40 text-xs">
+                  <div className="font-bold text-purple-700 dark:text-purple-300 mb-1">Take the Initial Diagnostic</div>
+                  <p className="text-gray-500 dark:text-gray-400 text-[11px] mb-2 leading-relaxed">
+                    Calibrate your knowledge baseline across syllabus topics with a 10-question assessment.
+                  </p>
+                  <Link
+                    to="/diagnostic/instructions"
+                    className="inline-block w-full py-2 px-3 rounded-lg text-center font-bold text-xs bg-purple-600 hover:bg-purple-700 text-white shadow-sm transition-all"
+                  >
+                    Start Diagnostic Assessment →
+                  </Link>
                 </div>
-              ))}
+              )}
+
+              {/* Skill weights breakdown */}
+              <div className="space-y-2 mt-4 pt-3 border-t border-gray-100 dark:border-gray-800">
+                {readiness?.skill_components?.map((sk) => (
+                  <div key={sk.skill_id} className="flex justify-between items-center text-xs">
+                    <span className="text-gray-500 dark:text-gray-400 truncate max-w-[150px]">{sk.skill_name}</span>
+                    <span className="font-mono font-bold text-gray-700 dark:text-gray-300">
+                      {sk.skill_percentage != null ? `${sk.skill_percentage}%` : "0%"} · {sk.progress_text || `${sk.demonstrated_topics || 0} of ${sk.total_topics || 0} demonstrated`}
+                    </span>
+                  </div>
+                ))}
+              </div>
             </div>
 
-            <Link
-              to="/progress"
-              className="block text-center text-xs font-bold text-purple-600 dark:text-purple-400 mt-4 hover:underline"
-            >
-              Full Readiness Decomposition →
-            </Link>
+            {readiness?.readiness_percentage != null && (
+              <Link
+                to="/progress"
+                className="block text-center text-xs font-bold text-purple-600 dark:text-purple-400 mt-4 hover:underline"
+              >
+                Full Readiness Decomposition →
+              </Link>
+            )}
           </div>
 
           {/* 2. Path Position Card */}
@@ -123,19 +156,31 @@ export default function Dashboard() {
                 <span className="text-xs font-mono text-gray-400">DAG Synchronized</span>
               </div>
 
-              <div className="text-2xl font-black text-gray-900 dark:text-white">
-                {pathSummary ? `${pathSummary.completed_count} / ${pathSummary.total_nodes} Nodes` : "--"}
-              </div>
-
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 mb-4 leading-relaxed">
-                {pathSummary?.remediations_active > 0 ? (
-                  <span className="text-rose-500 font-semibold">
-                    ⚠️ {pathSummary.remediations_active} dynamic prerequisite remediation(s) inserted.
-                  </span>
-                ) : (
-                  "Curriculum sequence follows strict topological ordering."
-                )}
-              </p>
+              {readiness?.is_assessed ? (
+                <>
+                  <div className="text-2xl font-black text-gray-900 dark:text-white">
+                    {pathSummary ? `${pathSummary.completed_count} / ${pathSummary.total_nodes} Nodes` : "--"}
+                  </div>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 mb-4 leading-relaxed">
+                    {pathSummary?.remediations_active > 0 ? (
+                      <span className="text-rose-500 font-semibold">
+                        ⚠️ {pathSummary.remediations_active} dynamic prerequisite remediation(s) inserted.
+                      </span>
+                    ) : (
+                      "Curriculum sequence follows strict topological ordering."
+                    )}
+                  </p>
+                </>
+              ) : (
+                <div className="py-2 space-y-2 mb-4">
+                  <div className="text-2xl font-black text-gray-900 dark:text-white">
+                    Not assessed yet
+                  </div>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
+                    Curriculum nodes will calibrate topologically based on your initial diagnostic gaps.
+                  </p>
+                </div>
+              )}
             </div>
 
             <Link
@@ -209,15 +254,15 @@ export default function Dashboard() {
                         {g.skill_name}
                       </span>
                       <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-700 dark:bg-rose-950/40 dark:text-rose-400">
-                        Rank #{g.priority.toFixed(3)}
+                        Rank #{g.priority != null ? g.priority.toFixed(3) : "--"}
                       </span>
                     </div>
 
                     <h3 className="font-bold text-sm text-gray-900 dark:text-white mb-2">{g.concept_name}</h3>
 
                     <div className="grid grid-cols-2 gap-2 text-xs text-gray-500 dark:text-gray-400 mb-4">
-                      <div>Accuracy: <strong>{(g.accuracy * 100).toFixed(0)}%</strong></div>
-                      <div>Gap: <strong>{g.gap_score.toFixed(3)}</strong></div>
+                      <div>Accuracy: <strong>{g.accuracy != null ? `${(g.accuracy * 100).toFixed(0)}%` : "--"}</strong></div>
+                      <div>Gap: <strong>{g.gap_score != null ? g.gap_score.toFixed(3) : "--"}</strong></div>
                     </div>
                   </div>
 

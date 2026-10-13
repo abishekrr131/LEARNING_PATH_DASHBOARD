@@ -39,6 +39,17 @@ export async function apiRequest(endpoint, options = {}) {
   const data = await response.json().catch(() => ({}));
 
   if (!response.ok) {
+    if (response.status === 401) {
+      setAuthToken(null);
+      localStorage.removeItem("palp_refresh_token");
+      if (
+        typeof window !== "undefined" &&
+        !window.location.pathname.startsWith("/login") &&
+        !endpoint.startsWith("/auth")
+      ) {
+        window.location.href = "/login?reason=session_expired";
+      }
+    }
     const errorMsg = data.detail || response.statusText || "Request failed";
     const err = new Error(errorMsg);
     err.status = response.status;
@@ -106,6 +117,45 @@ export const assessmentApi = {
       method: "POST",
       body: JSON.stringify(data),
     }),
+  getSubQuestions: (questionId) =>
+    apiRequest("/assessments/root-cause/sub-questions", {
+      method: "POST",
+      body: JSON.stringify({ question_id: questionId }),
+    }),
+  evaluateRootCause: (data) =>
+    apiRequest("/assessments/root-cause/evaluate", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+};
+
+// --- Dedicated Initial Diagnostic Endpoints ---
+export const diagnosticApi = {
+  start: (targetId) =>
+    apiRequest("/diagnostic/start", {
+      method: "POST",
+      body: JSON.stringify({ target_id: targetId }),
+    }),
+  submit: (assessmentId, responses) =>
+    apiRequest("/diagnostic/submit", {
+      method: "POST",
+      body: JSON.stringify({ assessment_id: assessmentId, responses }),
+    }),
+};
+
+// --- Weekly Progress Test Endpoints ---
+export const weeklyTestApi = {
+  getStatus: () => apiRequest("/weekly-test/status"),
+  start: (targetId, forceUnlock = false) =>
+    apiRequest("/weekly-test/start", {
+      method: "POST",
+      body: JSON.stringify({ target_id: targetId, force_unlock: forceUnlock }),
+    }),
+  submit: (assessmentId, responses) =>
+    apiRequest("/weekly-test/submit", {
+      method: "POST",
+      body: JSON.stringify({ assessment_id: assessmentId, responses }),
+    }),
 };
 
 // --- Analytics Endpoints ---
@@ -117,6 +167,10 @@ export const analyticsApi = {
     return apiRequest(`/analytics/root-causes${query}`);
   },
   getReadiness: () => apiRequest("/analytics/readiness"),
+  getCareerMap: (targetId) => {
+    const query = targetId ? `?target_id=${targetId}` : "";
+    return apiRequest(`/analytics/career-map${query}`);
+  },
 };
 
 // --- Learning Path & Resources Endpoints ---
@@ -125,6 +179,10 @@ export const learningApi = {
   getResources: (conceptId) => {
     const query = conceptId ? `?concept_id=${conceptId}` : "";
     return apiRequest(`/learning/resources${query}`);
+  },
+  getCareerMap: (targetId) => {
+    const query = targetId ? `?target_id=${targetId}` : "";
+    return apiRequest(`/learning/career-map${query}`);
   },
 };
 

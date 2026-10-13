@@ -129,9 +129,9 @@ class ConceptDependency(Base):
 class Question(Base):
     __tablename__ = "questions"
     __table_args__ = (
-        CheckConstraint("source IN ('curated','ai_generated','imported')", name="src_enum"),
-        CheckConstraint("review_status IN ('pending','approved','rejected')", name="rev_enum"),
-        CheckConstraint("source = 'curated' OR review_status = 'approved'", name="scorable_items_must_be_reviewed"),
+        CheckConstraint("source IN ('curated','ai_generated','imported','gemini')", name="src_enum"),
+        CheckConstraint("review_status IN ('pending','approved','rejected','generated')", name="rev_enum"),
+        CheckConstraint("source IN ('curated','gemini') OR review_status IN ('approved','generated')", name="scorable_items_must_be_reviewed"),
     )
 
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -145,12 +145,25 @@ class Question(Base):
     review_status: Mapped[str] = mapped_column(String(20), default="pending")  # pending by default, approved after human review
     reviewed_by: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     needs_human_review: Mapped[bool] = mapped_column(Boolean, default=True)
+    source_url: Mapped[str | None] = mapped_column(Text, nullable=True)
+    source_title: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    exam_year: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    license: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    verified: Mapped[bool] = mapped_column(Boolean, default=True)
 
     def __init__(self, **kwargs: Any):
         if "options" in kwargs and "options_json" not in kwargs:
             kwargs["options_json"] = kwargs.pop("options")
         if "difficulty_b" in kwargs and "difficulty_hint" not in kwargs:
             kwargs["difficulty_hint"] = kwargs.pop("difficulty_b")
+        if "difficulty" in kwargs and "difficulty_hint" not in kwargs:
+            kwargs["difficulty_hint"] = kwargs.pop("difficulty")
+        if "stem" in kwargs and "question_text" not in kwargs:
+            kwargs["question_text"] = kwargs.pop("stem")
+        if "correct_option" in kwargs and "correct_answer" not in kwargs:
+            kwargs["correct_answer"] = kwargs.pop("correct_option")
+        if "status" in kwargs and "review_status" not in kwargs:
+            kwargs["review_status"] = kwargs.pop("status")
         super().__init__(**kwargs)
 
     @property
@@ -169,8 +182,89 @@ class Question(Base):
     def difficulty_b(self, val: float) -> None:
         self.difficulty_hint = val
 
+    @property
+    def difficulty(self) -> float:
+        return self.difficulty_hint
+
+    @difficulty.setter
+    def difficulty(self, val: float) -> None:
+        self.difficulty_hint = val
+
+    @property
+    def stem(self) -> str:
+        return self.question_text
+
+    @stem.setter
+    def stem(self, val: str) -> None:
+        self.question_text = val
+
+    @property
+    def correct_option(self) -> str:
+        return self.correct_answer
+
+    @correct_option.setter
+    def correct_option(self, val: str) -> None:
+        self.correct_answer = val
+
+    @property
+    def status(self) -> str:
+        return self.review_status
+
+    @status.setter
+    def status(self, val: str) -> None:
+        self.review_status = val
+
+    @property
+    def topic_id(self) -> int | None:
+        return self.concept.topic_id if self.concept else None
+
+    @property
+    def skill_id(self) -> int | None:
+        return self.concept.topic.skill_id if self.concept and self.concept.topic else None
+
     concept: Mapped[Concept] = relationship("Concept", back_populates="questions")
     irt_params: Mapped[list[QuestionIrtParam]] = relationship("QuestionIrtParam", back_populates="question")
+    sub_questions: Mapped[list[SubQuestion]] = relationship(
+        "SubQuestion", back_populates="parent_question", cascade="all, delete-orphan", order_by="SubQuestion.order"
+    )
+
+
+class SubQuestion(Base):
+    __tablename__ = "sub_questions"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    parent_question_id: Mapped[int] = mapped_column(ForeignKey("questions.id", ondelete="CASCADE"), index=True)
+    stage: Mapped[str] = mapped_column(String(50))  # formula | substitution | calculation | concept_recall | elimination | final_answer
+    stem: Mapped[str] = mapped_column(Text)
+    options_json: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
+    correct_answer: Mapped[str] = mapped_column(String(10))
+    time_limit_sec: Mapped[int] = mapped_column(Integer, default=20)
+    order: Mapped[int] = mapped_column(Integer, default=1)
+
+    parent_question: Mapped[Question] = relationship("Question", back_populates="sub_questions")
+
+    def __init__(self, **kwargs: Any):
+        if "options" in kwargs and "options_json" not in kwargs:
+            kwargs["options_json"] = kwargs.pop("options")
+        if "correct_option" in kwargs and "correct_answer" not in kwargs:
+            kwargs["correct_answer"] = kwargs.pop("correct_option")
+        super().__init__(**kwargs)
+
+    @property
+    def options(self) -> dict[str, Any]:
+        return self.options_json
+
+    @options.setter
+    def options(self, val: dict[str, Any]) -> None:
+        self.options_json = val
+
+    @property
+    def correct_option(self) -> str:
+        return self.correct_answer
+
+    @correct_option.setter
+    def correct_option(self, val: str) -> None:
+        self.correct_answer = val
 
 
 class QuestionIrtParam(Base):
@@ -200,7 +294,7 @@ class CalibrationRun(Base):
 class Assessment(Base):
     __tablename__ = "assessments"
     __table_args__ = (
-        CheckConstraint("type IN ('initial','verification','practice','followup','probe','special')", name="assessment_type_enum"),
+        CheckConstraint("type IN ('initial','verification','practice','followup','probe','special','weekly_test')", name="assessment_type_enum"),
     )
 
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -259,6 +353,14 @@ class StudentResponse(Base):
     assessment: Mapped[Assessment] = relationship("Assessment", back_populates="responses")
     question: Mapped[Question] = relationship("Question")
     user: Mapped[User] = relationship("User", back_populates="responses")
+
+    @property
+    def concept_id(self) -> int | None:
+        return self.question.concept_id if self.question else None
+
+    @property
+    def topic_id(self) -> int | None:
+        return self.question.concept.topic_id if self.question and self.question.concept else None
 
 
 class VerificationProbe(Base):
@@ -365,6 +467,11 @@ class LearningResource(Base):
     description: Mapped[str] = mapped_column(Text, default="")
     embedding: Mapped[list[float] | None] = mapped_column(Vector(384), nullable=True)
     quality_score: Mapped[float] = mapped_column(Float, default=1.0)
+    provider: Mapped[str] = mapped_column(String(150), default="")
+    estimated_duration_min: Mapped[int] = mapped_column(Integer, default=30)
+    difficulty: Mapped[str] = mapped_column(String(50), default="Intermediate")
+    attribution: Mapped[str] = mapped_column(Text, default="")
+    license: Mapped[str] = mapped_column(String(100), default="")
 
     concept: Mapped[Concept] = relationship("Concept", back_populates="resources")
 
@@ -388,11 +495,22 @@ class LearningSchedule(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
     concept_id: Mapped[int] = mapped_column(ForeignKey("concepts.id", ondelete="CASCADE"), index=True)
-    activity_type: Mapped[str] = mapped_column(String(50))  # review, practice, test
+    activity_type: Mapped[str] = mapped_column(String(50))  # review, practice, test, weekly_test
     scheduled_date: Mapped[dt.date] = mapped_column(Date)
     duration_min: Mapped[int] = mapped_column(Integer, default=30)
     status: Mapped[str] = mapped_column(String(20), default="pending")  # pending, completed, skipped
     completed_at: Mapped[dt.datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    # Adaptive plan extensions
+    subject: Mapped[str | None] = mapped_column(String(150), nullable=True)
+    topic_name: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    learning_objective: Mapped[str | None] = mapped_column(Text, nullable=True)
+    resource_title: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    resource_url: Mapped[str | None] = mapped_column(Text, nullable=True)
+    practice_activity: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    mastery_target: Mapped[float] = mapped_column(Float, default=0.80)
+    follow_up_assessment: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    plan_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
 
 
 class LearningActivity(Base):

@@ -81,7 +81,7 @@ export default function FloatingGemini({ currentConceptId = null, currentConcept
           sender: "ai",
           text: err.status === 403
             ? `⚠️ Assistant Blocked: ${err.message}`
-            : "Sorry, I encountered an issue retrieving the response. Please try again shortly.",
+            : (err.message && err.message.includes("AI assistant unavailable") ? "AI assistant unavailable, retry" : "AI assistant unavailable, retry"),
           isError: true,
         },
       ]);

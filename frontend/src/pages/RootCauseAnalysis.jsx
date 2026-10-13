@@ -103,6 +103,113 @@ export default function RootCauseAnalysis() {
           </div>
         )}
 
+        {/* Diagnosed Cognitive Root Causes from 3 Sub-Questions */}
+        {analysis?.cognitive_gaps && analysis.cognitive_gaps.length > 0 && (
+          <div className="p-6 rounded-3xl bg-white dark:bg-gray-900 border border-purple-100 dark:border-purple-900/40 shadow-xl space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <span className="text-xs font-bold uppercase tracking-wider text-purple-600 dark:text-purple-400">
+                  ✦ Cognitive Process Diagnostic
+                </span>
+                <h3 className="text-lg font-black text-gray-900 dark:text-white mt-0.5">
+                  Diagnosed Cognitive Step Gaps (3 Sub-Question Analysis)
+                </h3>
+              </div>
+              <span className="text-xs text-gray-400 font-medium">
+                {analysis.cognitive_gaps.length} Question(s) Diagnosed
+              </span>
+            </div>
+
+            <div className="space-y-4">
+              {analysis.cognitive_gaps.map((item) => {
+                const gap = item.cognitive_gap;
+                const isFormula = gap.gap_type.includes("Formula");
+                const isSetup = gap.gap_type.includes("Application");
+                const isAccuracy = gap.gap_type.includes("accuracy");
+                const isSpeed = gap.gap_type.includes("speed");
+
+                const badgeColor = isFormula
+                  ? "bg-rose-100 text-rose-700 dark:bg-rose-950/50 dark:text-rose-300 border-rose-200 dark:border-rose-800"
+                  : isSetup
+                  ? "bg-amber-100 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300 border-amber-200 dark:border-amber-800"
+                  : isAccuracy
+                  ? "bg-orange-100 text-orange-700 dark:bg-orange-950/50 dark:text-orange-300 border-orange-200 dark:border-orange-800"
+                  : isSpeed
+                  ? "bg-purple-100 text-purple-700 dark:bg-purple-950/50 dark:text-purple-300 border-purple-200 dark:border-purple-800"
+                  : "bg-blue-100 text-blue-700 dark:bg-blue-950/50 dark:text-blue-300 border-blue-200 dark:border-blue-800";
+
+                return (
+                  <div
+                    key={item.id}
+                    className="p-5 rounded-2xl bg-gray-50/60 dark:bg-gray-800/40 border border-gray-200 dark:border-gray-800 space-y-3"
+                  >
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                      <div>
+                        <div className="flex items-center space-x-2">
+                          <h4 className="font-bold text-gray-900 dark:text-white text-sm">
+                            {item.topic_name} · {item.concept_name}
+                          </h4>
+                          <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold border ${badgeColor}`}>
+                            {gap.gap_type}
+                          </span>
+                        </div>
+                        {item.main_question_stem && (
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 line-clamp-1 italic">
+                            "{item.main_question_stem}"
+                          </p>
+                        )}
+                      </div>
+                      <div className="text-xs font-medium text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-950/40 px-3 py-1.5 rounded-xl border border-purple-200 dark:border-purple-800/50">
+                        Task: <strong>{gap.study_task}</strong>
+                      </div>
+                    </div>
+
+                    {/* 3 Sub-Question Stage Statuses */}
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1">
+                      {gap.stages.map((stg) => (
+                        <div
+                          key={stg.stage}
+                          className={`p-3 rounded-xl border text-xs flex items-center justify-between ${
+                            stg.is_correct && !stg.timed_out
+                              ? "bg-emerald-50/70 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800/50 text-emerald-800 dark:text-emerald-300"
+                              : stg.timed_out
+                              ? "bg-purple-50/70 dark:bg-purple-950/30 border-purple-200 dark:border-purple-800/50 text-purple-800 dark:text-purple-300"
+                              : "bg-rose-50/70 dark:bg-rose-950/30 border-rose-200 dark:border-rose-800/50 text-rose-800 dark:text-rose-300"
+                          }`}
+                        >
+                          <div>
+                            <span className="font-semibold block">{stg.name}</span>
+                            <span className="text-[10px] opacity-80">
+                              {stg.stage === "calculation" && stg.time_ms
+                                ? `${(stg.time_ms / 1000).toFixed(1)}s elapsed`
+                                : stg.stage === "calculation"
+                                ? "Timed 20s"
+                                : "Untimed check"}
+                            </span>
+                          </div>
+                          <span className="font-bold text-sm">
+                            {stg.timed_out ? "⏱ >20s" : stg.is_correct ? "✓ Pass" : "✗ Gap"}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* All three failed alert */}
+                    {gap.all_three_failed && (
+                      <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900 text-xs text-amber-800 dark:text-amber-300 flex items-center space-x-2">
+                        <span>⚠️</span>
+                        <span>
+                          <strong>All 3 stages missed:</strong> Foundational root-cause traced upstream via DAG prerequisites.
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         {/* Candidate Prerequisite List */}
         <div className="bg-white dark:bg-gray-900 rounded-3xl shadow-xl border border-purple-100 dark:border-purple-900/40 p-6 sm:p-8">
           <div className="flex items-center justify-between mb-6">

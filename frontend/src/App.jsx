@@ -2,6 +2,7 @@ import React from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { ThemeProvider } from "./context/ThemeContext";
+import ErrorBoundary from "./components/ErrorBoundary";
 
 // Pages
 import Landing from "./pages/Landing";
@@ -22,6 +23,8 @@ import StudySchedule from "./pages/StudySchedule";
 import PracticeMode from "./pages/PracticeMode";
 import AssessmentsHub from "./pages/AssessmentsHub";
 import SpecialTestRunnerPage from "./pages/SpecialTestRunnerPage";
+import WeeklyTestRunner from "./pages/WeeklyTestRunner";
+import WeeklyTestResult from "./pages/WeeklyTestResult";
 import ProgressReadiness from "./pages/ProgressReadiness";
 import SettingsProfile from "./pages/SettingsProfile";
 
@@ -46,7 +49,8 @@ function ProtectedRoute({ children }) {
 
 export default function App() {
   return (
-    <ThemeProvider>
+    <ErrorBoundary>
+      <ThemeProvider>
       <AuthProvider>
         <BrowserRouter>
           <Routes>
@@ -142,10 +146,34 @@ export default function App() {
               }
             />
             <Route
+              path="/diagnostic"
+              element={
+                <ProtectedRoute>
+                  <DiagnosticRunner />
+                </ProtectedRoute>
+              }
+            />
+            <Route
               path="/diagnostic/run"
               element={
                 <ProtectedRoute>
                   <DiagnosticRunner />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/weekly-test"
+              element={
+                <ProtectedRoute>
+                  <WeeklyTestRunner />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/weekly-test/result/:id"
+              element={
+                <ProtectedRoute>
+                  <WeeklyTestResult />
                 </ProtectedRoute>
               }
             />
@@ -216,5 +244,6 @@ export default function App() {
         </BrowserRouter>
       </AuthProvider>
     </ThemeProvider>
+    </ErrorBoundary>
   );
 }

@@ -1,10 +1,37 @@
-import React from "react";
+import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { diagnosticApi } from "../api/client";
 
 export default function AssessmentInstructions() {
   const { profile } = useAuth();
   const navigate = useNavigate();
+  const [isStarting, setIsStarting] = useState(false);
+  const [error, setError] = useState(null);
+
+  const handleStartDiagnostic = async () => {
+    setIsStarting(true);
+    setError(null);
+    const targetId = profile?.target_id || 1;
+
+    // 30s timeout controller
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error("Diagnostic generation timed out after 30 seconds. Please retry.")), 30000)
+    );
+
+    try {
+      const data = await Promise.race([
+        diagnosticApi.start(targetId),
+        timeoutPromise,
+      ]);
+      navigate("/diagnostic", { state: { assessment: data } });
+    } catch (err) {
+      console.error("Diagnostic start failed:", err);
+      setError(err.message || "Failed to initialize diagnostic session. Please retry.");
+    } finally {
+      setIsStarting(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-gray-950 flex flex-col justify-center items-center px-4 sm:px-6 lg:px-8 py-12">
@@ -53,13 +80,34 @@ export default function AssessmentInstructions() {
           </div>
         </div>
 
+        {error && (
+          <div className="mt-6 p-4 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 text-center">
+            <p className="text-xs font-semibold text-rose-600 dark:text-rose-400 mb-2">⚠️ {error}</p>
+            <button
+              type="button"
+              onClick={handleStartDiagnostic}
+              className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold transition-all"
+            >
+              Retry Generation
+            </button>
+          </div>
+        )}
+
         <div className="mt-8">
           <button
             type="button"
-            onClick={() => navigate("/diagnostic")}
-            className="w-full py-4 px-6 rounded-xl font-bold text-sm bg-gradient-to-r from-purple-600 via-indigo-600 to-rose-500 hover:from-purple-700 hover:to-rose-600 text-white shadow-xl shadow-purple-500/20 transition-all transform hover:-translate-y-0.5"
+            disabled={isStarting}
+            onClick={handleStartDiagnostic}
+            className="w-full py-4 px-6 rounded-xl font-bold text-sm bg-gradient-to-r from-purple-600 via-indigo-600 to-rose-500 hover:from-purple-700 hover:to-rose-600 text-white shadow-xl shadow-purple-500/20 transition-all transform hover:-translate-y-0.5 disabled:opacity-50 flex items-center justify-center space-x-2"
           >
-            Start Initial Diagnostic Assessment →
+            {isStarting ? (
+              <>
+                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                <span>Generating your diagnostic…</span>
+              </>
+            ) : (
+              <span>Start Initial Diagnostic Assessment →</span>
+            )}
           </button>
         </div>
       </div>

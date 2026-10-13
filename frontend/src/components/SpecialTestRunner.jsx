@@ -1,5 +1,6 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { assessmentApi } from "../api/client";
+import { toOptionList } from "../utils/options";
 
 /**
  * Special Test Mode Runner.
@@ -11,7 +12,7 @@ import { assessmentApi } from "../api/client";
  * - Dynamic server-selected sub-questions with prerequisite bias
  * - Block-end diagnostic review and final summary
  */
-export default function SpecialTestRunner({ assessmentId, initialItems, onCompleted }) {
+export default function SpecialTestRunner({ assessmentId, initialItems, onCompleted, onFinished }) {
   const [currentBlockIndex, setCurrentBlockIndex] = useState(0);
   const [phase, setPhase] = useState("main"); // 'main', 'sub', 'block_end', 'completed'
   const [subIndex, setSubIndex] = useState(0);
@@ -51,7 +52,7 @@ export default function SpecialTestRunner({ assessmentId, initialItems, onComple
         setTimeLeft((prev) => {
           if (prev <= 1) {
             clearInterval(timerRef.current);
-            handleTimeout();
+            handleTimeoutRef.current?.();
             return 0;
           }
           return prev - 1;
@@ -65,10 +66,26 @@ export default function SpecialTestRunner({ assessmentId, initialItems, onComple
     };
   }, [currentBlockIndex, phase, subIndex]);
 
-  // Handle timeout auto-submission
+  const handleTimeoutRef = useRef(null);
   const handleTimeout = () => {
     recordAnswer({ timedOut: true, skipped: false });
   };
+  handleTimeoutRef.current = handleTimeout;
+
+  // Leaving page or blurring tab triggers automatic timeout per spec
+  useEffect(() => {
+    const handleLeaving = () => {
+      if (document.hidden && (phase === "main" || phase === "sub") && !isSubmitting) {
+        handleTimeoutRef.current?.();
+      }
+    };
+    document.addEventListener("visibilitychange", handleLeaving);
+    window.addEventListener("pagehide", handleLeaving);
+    return () => {
+      document.removeEventListener("visibilitychange", handleLeaving);
+      window.removeEventListener("pagehide", handleLeaving);
+    };
+  }, [phase, isSubmitting, currentItem]);
 
   // Record an answer (either normal submission, skip, or timeout)
   const recordAnswer = async ({ timedOut = false, skipped = false }) => {
@@ -237,7 +254,7 @@ export default function SpecialTestRunner({ assessmentId, initialItems, onComple
         </div>
 
         <button
-          onClick={() => onCompleted(finalSummary)}
+          onClick={() => (onCompleted ? onCompleted(finalSummary) : onFinished && onFinished(finalSummary))}
           className="w-full py-3.5 px-6 rounded-xl font-semibold text-sm bg-purple-600 hover:bg-purple-700 text-white shadow-md shadow-purple-500/20 transition-all"
         >
           Return to Dashboard →
@@ -268,8 +285,19 @@ export default function SpecialTestRunner({ assessmentId, initialItems, onComple
             <span className="mx-1.5 opacity-50">·</span>
             {currentItem.concept_name}
           </div>
-          <div className="text-xs text-gray-400 mt-1">
-            {phase === "main" ? "Core Concept Test" : "Prerequisite Verification Probe"}
+          <div className="flex items-center gap-2 mt-1">
+            <span className="text-xs text-gray-400">
+              {phase === "main" ? "Core Concept Test" : "Prerequisite Verification Probe"}
+            </span>
+            <span
+              className={`px-2 py-0.5 rounded-full font-medium text-[10px] ${
+                currentItem.source === "gemini"
+                  ? "bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300 border border-purple-200 dark:border-purple-800"
+                  : "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300 border border-amber-200 dark:border-amber-800"
+              }`}
+            >
+              {currentItem.source === "gemini" ? "✨ AI-Generated" : "📚 Question Bank"}
+            </span>
           </div>
         </div>
 
@@ -314,17 +342,17 @@ export default function SpecialTestRunner({ assessmentId, initialItems, onComple
 
       {/* Question Text */}
       <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-6 leading-relaxed">
-        {currentItem.question_text}
+        {currentItem.question_text || currentItem.stem || currentItem.text}
       </h3>
 
       {/* Options */}
       <div className="space-y-3 mb-8">
-        {Object.entries(currentItem.options).map(([key, text]) => {
-          const isSelected = selected === key;
+        {toOptionList(currentItem.options).map((opt) => {
+          const isSelected = selected === opt.key;
           return (
             <label
-              key={key}
-              onClick={() => setSelected(key)}
+              key={opt.key}
+              onClick={() => setSelected(opt.key)}
               className={`flex items-start p-4 rounded-xl border cursor-pointer transition-all ${
                 isSelected
                   ? "border-purple-600 bg-purple-50/50 dark:bg-purple-900/20 text-purple-950 dark:text-purple-100 shadow-sm"
@@ -338,9 +366,9 @@ export default function SpecialTestRunner({ assessmentId, initialItems, onComple
                     : "bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300"
                 }`}
               >
-                {key}
+                {opt.key}
               </div>
-              <span className="text-sm leading-relaxed">{text}</span>
+              <span className="text-sm leading-relaxed">{opt.text}</span>
             </label>
           );
         })}

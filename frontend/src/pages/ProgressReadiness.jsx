@@ -63,34 +63,51 @@ export default function ProgressReadiness() {
                     <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-white/20 text-purple-200">
                       {readiness.target_name} Target
                     </span>
+                    {readiness.learning_stage && (
+                      <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-purple-500/80 text-white">
+                        {readiness.learning_stage}
+                      </span>
+                    )}
                     <span className="text-xs text-rose-300 font-medium">
-                      (estimate, not guarantee)
+                      ({readiness.label || "Provisional estimate"})
                     </span>
                   </div>
                   <h2 className="text-4xl sm:text-5xl font-black tracking-tight text-white">
-                    {readiness.readiness_percentage}%
+                    {readiness.topic_coverage_readiness_pct != null
+                      ? `${readiness.topic_coverage_readiness_pct}%`
+                      : readiness.readiness_percentage != null
+                      ? `${readiness.readiness_percentage}%`
+                      : "Not assessed yet"}
                   </h2>
-                  <p className="text-xs sm:text-sm text-purple-200 mt-2 max-w-md">
+                  <div className="mt-2 text-xs sm:text-sm text-purple-200 max-w-md space-y-1">
+                    <p>
+                      <strong>Topic Coverage Readiness:</strong>{" "}
+                      {readiness.demonstrated_topics_count || 0} of {readiness.total_syllabus_topics || 0} syllabus topics demonstrated correctly.
+                    </p>
                     {readiness.is_ready ? (
-                      <span className="text-emerald-400 font-semibold">
+                      <p className="text-emerald-400 font-semibold">
                         ✓ Readiness threshold achieved (Threshold: {Math.round(readiness.readiness_threshold * 100)}%). Continue spaced reviews to preserve retention.
-                      </span>
+                      </p>
                     ) : (
-                      <span>
+                      <p>
                         Target threshold is {Math.round(readiness.readiness_threshold * 100)}%. Gap to threshold:{" "}
                         <strong className="text-amber-300">
-                          {Math.max(0, Math.round((readiness.readiness_threshold - readiness.readiness_score) * 100))}%
+                          {readiness.topic_coverage_readiness_pct != null
+                            ? `${Math.max(0, Math.round((readiness.readiness_threshold * 100) - readiness.topic_coverage_readiness_pct))}%`
+                            : "Take Diagnostic"}
                         </strong>
-                      </span>
+                      </p>
                     )}
-                  </p>
+                  </div>
                 </div>
 
                 {/* Progress bar container */}
                 <div className="w-full md:w-72 bg-white/10 p-4 rounded-2xl border border-white/10 backdrop-blur-sm space-y-2">
                   <div className="flex justify-between text-xs text-purple-200">
                     <span>Current Score</span>
-                    <span className="font-bold">{readiness.readiness_score.toFixed(2)} / 1.00</span>
+                    <span className="font-bold">
+                      {readiness.readiness_score != null ? `${readiness.readiness_score.toFixed(2)} / 1.00` : "Not assessed"}
+                    </span>
                   </div>
                   <div className="h-3 w-full bg-white/10 rounded-full overflow-hidden">
                     <div
@@ -99,7 +116,7 @@ export default function ProgressReadiness() {
                           ? "bg-gradient-to-r from-emerald-400 to-teal-400"
                           : "bg-gradient-to-r from-purple-400 via-indigo-400 to-rose-400"
                       }`}
-                      style={{ width: `${Math.min(100, readiness.readiness_percentage)}%` }}
+                      style={{ width: `${Math.min(100, readiness.readiness_percentage || 0)}%` }}
                     />
                   </div>
                   <div className="flex justify-between text-[10px] text-purple-300/80">
@@ -151,7 +168,7 @@ export default function ProgressReadiness() {
                         </span>
                       </div>
                       <p className="text-xs text-gray-500 dark:text-gray-400">
-                        {skill.concept_count} Concepts evaluated in this domain
+                        {skill.progress_text || `${skill.demonstrated_topics || 0} of ${skill.total_topics || skill.concept_count || 0} topics demonstrated`}
                       </p>
                     </div>
 
@@ -160,19 +177,13 @@ export default function ProgressReadiness() {
                         <div className="flex justify-between text-xs mb-1">
                           <span className="text-gray-400">Domain Mastery</span>
                           <span className="font-bold text-gray-900 dark:text-white">
-                            {Math.round(skill.mean_mastery * 100)}%
+                            {skill.skill_percentage != null ? `${skill.skill_percentage}%` : `${Math.round((skill.mean_mastery || 0) * 100)}%`}
                           </span>
                         </div>
                         <div className="h-2 w-full bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
                           <div
-                            className={`h-full rounded-full ${
-                              skill.mean_mastery >= 0.70
-                                ? "bg-emerald-500"
-                                : skill.mean_mastery >= 0.40
-                                ? "bg-amber-500"
-                                : "bg-rose-500"
-                            }`}
-                            style={{ width: `${Math.min(100, skill.mean_mastery * 100)}%` }}
+                            className="bg-purple-600 h-full rounded-full transition-all duration-700"
+                            style={{ width: `${skill.skill_percentage != null ? skill.skill_percentage : (skill.mean_mastery || 0) * 100}%` }}
                           />
                         </div>
                       </div>
