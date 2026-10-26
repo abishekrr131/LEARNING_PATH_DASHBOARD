@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { analyticsApi, learningApi, scheduleApi } from "../api/client";
+import { analyticsApi, learningApi, scheduleApi, diagnosticApi } from "../api/client";
 import { useAuth } from "../context/AuthContext";
 import MainLayout from "../layouts/MainLayout";
 
@@ -10,6 +10,7 @@ export default function Dashboard() {
   const [gaps, setGaps] = useState([]);
   const [nextSchedule, setNextSchedule] = useState(null);
   const [pathSummary, setPathSummary] = useState(null);
+  const [diagnosticStatus, setDiagnosticStatus] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -18,12 +19,14 @@ export default function Dashboard() {
       analyticsApi.getGaps().catch(() => ({ gaps: [] })),
       scheduleApi.get().catch(() => ({ schedule: [] })),
       learningApi.getPath().catch(() => null),
-    ]).then(([readinessRes, gapsRes, scheduleRes, pathRes]) => {
+      diagnosticApi.getStatus().catch(() => null),
+    ]).then(([readinessRes, gapsRes, scheduleRes, pathRes, diagRes]) => {
       setReadiness(readinessRes);
       setGaps(gapsRes?.gaps || []);
       const pendingItems = (scheduleRes?.schedule || []).filter((s) => !s.completed);
       setNextSchedule(pendingItems[0] || null);
       setPathSummary(pathRes);
+      setDiagnosticStatus(diagRes);
       setLoading(false);
     });
   }, []);
@@ -108,7 +111,7 @@ export default function Dashboard() {
                 />
               </div>
 
-              {!readiness?.is_assessed && (
+              {!readiness?.is_assessed && !diagnosticStatus?.is_completed && (
                 <div className="mb-4 p-3 rounded-xl bg-purple-50 dark:bg-purple-950/40 border border-purple-100 dark:border-purple-900/40 text-xs">
                   <div className="font-bold text-purple-700 dark:text-purple-300 mb-1">Take the Initial Diagnostic</div>
                   <p className="text-gray-500 dark:text-gray-400 text-[11px] mb-2 leading-relaxed">
@@ -119,6 +122,24 @@ export default function Dashboard() {
                     className="inline-block w-full py-2 px-3 rounded-lg text-center font-bold text-xs bg-purple-600 hover:bg-purple-700 text-white shadow-sm transition-all"
                   >
                     Start Diagnostic Assessment →
+                  </Link>
+                </div>
+              )}
+
+              {diagnosticStatus?.is_completed && (
+                <div className="mb-4 p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-100 dark:border-emerald-900/40 text-xs">
+                  <div className="flex items-center justify-between font-bold text-emerald-700 dark:text-emerald-300 mb-1">
+                    <span>Initial Diagnostic Completed ✓</span>
+                    <span className="font-mono text-[11px]">{diagnosticStatus.score != null ? `${Math.round(diagnosticStatus.score)}%` : ""}</span>
+                  </div>
+                  <p className="text-gray-500 dark:text-gray-400 text-[11px] mb-2 leading-relaxed">
+                    Baseline established across target skills. Adaptive schedule & root causes active.
+                  </p>
+                  <Link
+                    to={`/result/${diagnosticStatus.assessment_id}`}
+                    className="inline-block w-full py-2 px-3 rounded-lg text-center font-bold text-xs bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm transition-all"
+                  >
+                    Review Diagnostic Results →
                   </Link>
                 </div>
               )}

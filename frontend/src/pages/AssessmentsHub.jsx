@@ -1,15 +1,48 @@
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import MainLayout from "../layouts/MainLayout";
-import { weeklyTestApi } from "../api/client";
+import { weeklyTestApi, diagnosticApi } from "../api/client";
 
 export default function AssessmentsHub() {
   const navigate = useNavigate();
   const [weeklyStatus, setWeeklyStatus] = useState(null);
+  const [diagnosticStatus, setDiagnosticStatus] = useState(null);
 
   useEffect(() => {
     weeklyTestApi.getStatus().then(setWeeklyStatus).catch(() => null);
+    diagnosticApi.getStatus().then(setDiagnosticStatus).catch(() => null);
   }, []);
+
+  const getDiagnosticBadge = () => {
+    if (diagnosticStatus?.is_completed) {
+      return {
+        badge: "Completed ✓ • Baseline Established",
+        color: "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800",
+        description: `Baseline established on ${diagnosticStatus.completed_at ? new Date(diagnosticStatus.completed_at).toLocaleDateString() : "recently"}. Score: ${Math.round(diagnosticStatus.score || 0)}% across 10 curriculum-stratified items.`,
+        actionText: "Review Diagnostic",
+        path: `/result/${diagnosticStatus.assessment_id}`,
+        primary: false,
+      };
+    }
+    if (diagnosticStatus?.status === "in_progress") {
+      return {
+        badge: "In Progress • Resumable",
+        color: "bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-300",
+        description: "Active diagnostic session in progress. Resume to calibrate your skill baseline.",
+        actionText: "Resume Diagnostic",
+        path: "/diagnostic",
+        primary: true,
+      };
+    }
+    return {
+      badge: "Scored • Baseline",
+      color: "bg-purple-100 text-purple-800 dark:bg-purple-950/60 dark:text-purple-300",
+      description: "Exactly 10 approved MCQs stratified across target skills in proportion to syllabus weights. Orders items from easy to hard with high-precision millisecond timing.",
+      actionText: "Start Diagnostic",
+      path: "/diagnostic/instructions",
+      primary: true,
+    };
+  };
 
   const getWeeklyBadge = () => {
     if (!weeklyStatus || !weeklyStatus.is_scheduled) {
@@ -52,20 +85,20 @@ export default function AssessmentsHub() {
     };
   };
 
+  const diagBadge = getDiagnosticBadge();
   const weeklyBadge = getWeeklyBadge();
 
   const assessmentModes = [
     {
       id: "diagnostic",
       title: "Initial Diagnostic Assessment",
-      badge: "Scored • Baseline",
-      badgeColor: "bg-purple-100 text-purple-800 dark:bg-purple-950/60 dark:text-purple-300",
-      description:
-        "Exactly 10 approved MCQs stratified across target skills in proportion to syllabus weights. Orders items from easy to hard with high-precision millisecond timing.",
-      meta: "10 Questions • ~15 Mins • Gemini Silenced",
-      actionText: "Start Diagnostic",
-      path: "/diagnostic/instructions",
-      primary: true,
+      badge: diagBadge.badge,
+      badgeColor: diagBadge.color,
+      description: diagBadge.description,
+      meta: "10 Questions • ~15 Mins • Baseline Calibrated",
+      actionText: diagBadge.actionText,
+      path: diagBadge.path,
+      primary: diagBadge.primary,
     },
     {
       id: "weekly",

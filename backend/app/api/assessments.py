@@ -53,7 +53,13 @@ from backend.app.services.question_generator import (
     generate_root_cause_sub_questions,
     to_options_list,
 )
-from backend.app.services.root_cause import get_ancestors_within_hops, select_verification_probes
+from backend.app.services.root_cause import (
+    get_ancestors_within_hops,
+    select_verification_probes,
+    rank_root_cause_candidates,
+    attention_entropy,
+    present_as_mode,
+)
 from backend.app.services.scoring import (
     expected_response_time,
     gap_band,
@@ -222,6 +228,8 @@ def start_assessment(
                 time_limit_sec=time_limit,
                 practice_mode=practice_mode,
             )
+        except HTTPException:
+            raise
         except Exception as e:
             logger.warning("Practice session initialization error: %s", e)
             raise HTTPException(
@@ -953,10 +961,10 @@ def get_root_cause_sub_questions_endpoint(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """Generates 3 short multiple-choice sub-questions in strict order:
-    1. Formula recall (30s)
-    2. Substitution / setup (30s)
-    3. Calculation (timed 20s)
+    """Retrieves or generates up to 3 relevant prerequisite diagnostic questions for a main question.
+    Persists the main question attempt if assessment_id is provided.
+    Inspects curriculum DAG ancestors up to 2 hops, selects verified prerequisite questions,
+    and returns them immediately before advancing to the next main question.
     """
     question = db.get(Question, req.question_id)
     if not question:
@@ -967,9 +975,42 @@ def get_root_cause_sub_questions_endpoint(
     tname = topic.name if topic else (concept.name if concept else "Topic")
     cname = concept.name if concept else "Concept"
 
-    from backend.app.models.core import SubQuestion
-    from backend.app.services.question_generator import to_options_list
+    # Persist the main question attempt if assessment_id is provided
+    main_resp = None
+    if req.assessment_id:
+        main_resp = db.execute(
+            select(StudentResponse).where(
+                StudentResponse.user_id == current_user.id,
+                StudentResponse.assessment_id == req.assessment_id,
+                StudentResponse.question_id == question.id,
+                StudentResponse.phase == "main",
+            )
+        ).scalars().first()
 
+        if not main_resp:
+            is_corr = (not req.timed_out) and (req.selected_answer is not None) and (
+                str(req.selected_answer).strip().upper() == str(question.correct_answer).strip().upper()
+            )
+            main_resp = StudentResponse(
+                user_id=current_user.id,
+                assessment_id=req.assessment_id,
+                question_id=question.id,
+                selected_answer=req.selected_answer,
+                is_correct=is_corr,
+                response_time_ms=req.response_time_ms,
+                skipped=(req.selected_answer is None and not req.timed_out),
+                timed_out=req.timed_out,
+                phase="main",
+                answered_at=dt.datetime.now(dt.timezone.utc),
+            )
+            db.add(main_resp)
+            db.commit()
+            db.refresh(main_resp)
+
+    from backend.app.models.core import SubQuestion
+    from backend.app.services.question_generator import to_options_list, generate_root_cause_sub_questions
+
+    # 1. Check if explicit SubQuestion stages exist for this question
     stored_sqs = (
         db.query(SubQuestion)
         .filter(SubQuestion.parent_question_id == question.id)
@@ -977,29 +1018,110 @@ def get_root_cause_sub_questions_endpoint(
         .all()
     )
 
-    if not stored_sqs:
+    if stored_sqs:
+        sub_qs = [
+            {
+                "id": sq.id,
+                "stage": sq.stage,
+                "order": sq.order,
+                "stem": sq.stem,
+                "options": to_options_list(sq.options),
+                "correct_option": sq.correct_answer,
+                "time_limit_sec": sq.time_limit_sec,
+            }
+            for sq in stored_sqs
+        ]
         return RootCauseSubQuestionsOut(
             question_id=question.id,
             topic_name=tname,
             concept_name=cname,
             main_question_stem=question.question_text,
-            sub_questions=[],
-            has_sub_questions=False,
-            message="No diagnostic sub-questions available",
+            sub_questions=sub_qs,
+            has_sub_questions=True,
+            parent_response_id=main_resp.id if main_resp else None,
+            message="3-stage sub-questions retrieved from question bank",
         )
 
-    sub_qs = [
-        {
-            "id": sq.id,
-            "stage": sq.stage,
-            "order": sq.order,
-            "stem": sq.stem,
-            "options": to_options_list(sq.options),
-            "correct_option": sq.correct_answer,
-            "time_limit_sec": sq.time_limit_sec,
-        }
-        for sq in stored_sqs
-    ]
+    # 2. Inspect prerequisite concepts in Curriculum DAG (1-hop and 2-hop)
+    deps = db.execute(select(ConceptDependency)).scalars().all()
+    g = SimpleDiGraph([(d.prerequisite_id, d.concept_id) for d in deps])
+    ancestors = get_ancestors_within_hops(g, question.concept_id, max_hops=2)
+
+    prereq_qs = []
+    if ancestors:
+        ordered_anc_ids = sorted(ancestors.keys(), key=lambda aid: ancestors[aid])
+        for anc_id in ordered_anc_ids:
+            qs = db.execute(
+                select(Question, Concept.name)
+                .join(Concept, Question.concept_id == Concept.id)
+                .where(
+                    Question.concept_id == anc_id,
+                    Question.id != question.id,
+                    Question.review_status == "approved",
+                )
+            ).all()
+            for q_item, c_name in qs:
+                prereq_qs.append((q_item, c_name, f"prerequisite: {c_name}"))
+                if len(prereq_qs) >= 3:
+                    break
+            if len(prereq_qs) >= 3:
+                break
+
+    # 3. Fallback to approved bank questions on same topic / concept if needed
+    if len(prereq_qs) < 3:
+        same_concept_qs = db.execute(
+            select(Question, Concept.name)
+            .join(Concept, Question.concept_id == Concept.id)
+            .where(
+                Question.concept_id == question.concept_id,
+                Question.id != question.id,
+                Question.review_status == "approved",
+            )
+        ).all()
+        for q_item, c_name in same_concept_qs:
+            if not any(pq[0].id == q_item.id for pq in prereq_qs):
+                prereq_qs.append((q_item, c_name, f"diagnostic_probe: {c_name}"))
+                if len(prereq_qs) >= 3:
+                    break
+
+    # 4. If still empty, use generated template sub-questions
+    if not prereq_qs:
+        generated = generate_root_cause_sub_questions(question)
+        if generated:
+            sub_qs = [
+                {
+                    "id": 900000 + idx,
+                    "stage": g_item["stage"],
+                    "order": g_item["order"],
+                    "stem": g_item["stem"],
+                    "options": to_options_list(g_item["options"]),
+                    "correct_option": g_item["correct_answer"],
+                    "time_limit_sec": g_item["time_limit_sec"],
+                }
+                for idx, g_item in enumerate(generated)
+            ]
+            return RootCauseSubQuestionsOut(
+                question_id=question.id,
+                topic_name=tname,
+                concept_name=cname,
+                main_question_stem=question.question_text,
+                sub_questions=sub_qs,
+                has_sub_questions=True,
+                parent_response_id=main_resp.id if main_resp else None,
+                message="Sub-questions generated from question template",
+            )
+
+    sub_qs = []
+    for idx, (q_item, c_name, stage_name) in enumerate(prereq_qs[:3]):
+        sub_qs.append({
+            "id": q_item.id,
+            "stage": stage_name,
+            "order": idx + 1,
+            "stem": q_item.question_text,
+            "options": to_options_list(q_item.options),
+            "correct_option": q_item.correct_answer,
+            "time_limit_sec": 30,
+        })
 
     return RootCauseSubQuestionsOut(
         question_id=question.id,
@@ -1007,8 +1129,9 @@ def get_root_cause_sub_questions_endpoint(
         concept_name=cname,
         main_question_stem=question.question_text,
         sub_questions=sub_qs,
-        has_sub_questions=True,
-        message="3-stage sub-questions retrieved from question bank",
+        has_sub_questions=len(sub_qs) > 0,
+        parent_response_id=main_resp.id if main_resp else None,
+        message=f"{len(sub_qs)} prerequisite diagnostic questions retrieved",
     )
 
 
@@ -1018,14 +1141,9 @@ def evaluate_root_cause_endpoint(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """Classifies cognitive root-cause gap based on the 3 sub-question stages:
-    - Formula wrong -> Formula knowledge gap
-    - Formula right, substitution wrong -> Application/setup gap
-    - Formula & substitution right, calculation wrong -> Calculation accuracy gap
-    - Calculation right but time > threshold -> Calculation speed gap
-    - All right -> Careless error
-    Stores cause in RootCauseAnalysis and shapes study task.
-    If all three failed, traces prerequisite DAG upstream.
+    """Classifies cognitive root-cause gap based on sub-question responses.
+    Persists sub-responses with phase='sub' and parent_response_id.
+    Updates prerequisite concept mastery and records evidence in RootCauseAnalysis.
     """
     question = db.get(Question, req.question_id)
     if not question:
@@ -1036,6 +1154,52 @@ def evaluate_root_cause_endpoint(
     tname = topic.name if topic else (concept.name if concept else "Topic")
     cname = concept.name if concept else "Concept"
 
+    # Persist sub-responses if provided
+    if req.sub_responses:
+        for s_res in req.sub_responses:
+            s_qid = s_res.get("question_id")
+            s_q = db.get(Question, s_qid) if s_qid else None
+            is_sub_corr = bool(s_res.get("is_correct", False))
+
+            db_sub = StudentResponse(
+                user_id=current_user.id,
+                assessment_id=req.assessment_id or 1,
+                question_id=s_qid or question.id,
+                selected_answer=s_res.get("selected_answer"),
+                is_correct=is_sub_corr,
+                response_time_ms=s_res.get("response_time_ms", 12000),
+                skipped=bool(s_res.get("skipped", False)),
+                phase="sub",
+                parent_response_id=req.parent_response_id,
+                answered_at=dt.datetime.now(dt.timezone.utc),
+            )
+            db.add(db_sub)
+
+            # Update prerequisite concept mastery in StudentMastery
+            if s_q and s_q.concept_id:
+                m_rec = db.execute(
+                    select(StudentMastery).where(
+                        StudentMastery.user_id == current_user.id,
+                        StudentMastery.concept_id == s_q.concept_id,
+                    )
+                ).scalar_one_or_none()
+                delta = 0.08 if is_sub_corr else -0.12
+                if m_rec:
+                    m_rec.mastery_score = max(0.05, min(0.95, m_rec.mastery_score + delta))
+                    m_rec.updated_at = dt.datetime.now(dt.timezone.utc)
+                else:
+                    db.add(
+                        StudentMastery(
+                            user_id=current_user.id,
+                            concept_id=s_q.concept_id,
+                            mastery_score=0.65 if is_sub_corr else 0.35,
+                            confidence=0.50,
+                            model_version="rct_gat_sub_probe",
+                        )
+                    )
+                    db.flush()
+
+    # Classify cognitive gap
     classification = classify_root_cause_gap(
         formula_correct=req.formula_correct,
         substitution_correct=req.substitution_correct,
@@ -1044,27 +1208,48 @@ def evaluate_root_cause_endpoint(
         time_threshold_ms=req.time_threshold_ms,
     )
 
+    deps = db.execute(select(ConceptDependency)).scalars().all()
+    g = SimpleDiGraph([(d.prerequisite_id, d.concept_id) for d in deps])
+    ancestors = get_ancestors_within_hops(g, question.concept_id, max_hops=2)
+
     upstream_prereqs = []
-    if classification["all_three_failed"]:
-        deps = db.execute(select(ConceptDependency)).scalars().all()
-        g = SimpleDiGraph([(d.prerequisite_id, d.concept_id) for d in deps])
-        ancestors = get_ancestors_within_hops(g, question.concept_id, max_hops=2)
-        for anc_id, hop in ancestors.items():
-            anc_c = db.get(Concept, anc_id)
-            if anc_c:
-                upstream_prereqs.append({
-                    "concept_id": anc_c.id,
-                    "concept_name": anc_c.name,
-                    "hops": hop,
-                })
+    for anc_id, hop in ancestors.items():
+        anc_c = db.get(Concept, anc_id)
+        if anc_c:
+            upstream_prereqs.append({
+                "concept_id": anc_c.id,
+                "concept_name": anc_c.name,
+                "hops": hop,
+            })
+
+    # Fetch learner masteries to compute ranking and attention entropy
+    masteries = db.execute(
+        select(StudentMastery).where(StudentMastery.user_id == current_user.id)
+    ).scalars().all()
+    mastery_map = {m.concept_id: m.mastery_score for m in masteries}
+    all_cs = db.execute(select(Concept)).scalars().all()
+    name_map = {c.id: c.name for c in all_cs}
+
+    candidates = rank_root_cause_candidates(
+        surface_concept_id=question.concept_id,
+        ancestors_with_hops=ancestors,
+        concept_mastery=mastery_map,
+        concept_names=name_map,
+    )
+
+    alphas = [c["attention_alpha"] for c in candidates]
+    raw_h, norm_h = attention_entropy(alphas)
+
+    primary_candidate_id = candidates[0]["candidate_concept_id"] if candidates else question.concept_id
+    primary_alpha = candidates[0]["attention_alpha"] if candidates else 1.0
 
     rc_entry = RootCauseAnalysis(
         user_id=current_user.id,
         current_concept_id=question.concept_id,
-        candidate_concept_id=upstream_prereqs[0]["concept_id"] if upstream_prereqs else question.concept_id,
-        root_score=0.95 if classification["all_three_failed"] else 0.75,
-        attention_alpha=0.88,
-        attention_entropy=0.18,
+        candidate_concept_id=primary_candidate_id,
+        root_score=candidates[0]["root_score"] if candidates else 0.75,
+        attention_alpha=round(primary_alpha, 4),
+        attention_entropy=round(norm_h, 4),
         rank=1,
         evidence_json={
             "topic_id": topic.id if topic else None,
@@ -1073,8 +1258,9 @@ def evaluate_root_cause_endpoint(
             "cognitive_gap": classification,
             "main_question_stem": question.question_text,
             "upstream_prerequisites": upstream_prereqs,
+            "candidates": candidates[:3],
         },
-        model_version="root_cause_sub_q_v1",
+        model_version="rct_gat_sub_probe_v2",
     )
     db.add(rc_entry)
     db.commit()

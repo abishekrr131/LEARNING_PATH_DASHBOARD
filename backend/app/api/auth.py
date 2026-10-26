@@ -28,14 +28,14 @@ def google_sign_in(payload: GoogleAuthIn, db: Session = Depends(get_db)):
     sub: str | None = None
     picture: str | None = None
 
-    # Development test harness guard (only in development)
-    if token_str.startswith("mock-google-token-") or token_str.startswith("google-token-"):
+    # Test harness guard for automated offline tests (strictly refused in production)
+    if token_str.startswith("mock-google-token-"):
         if settings.ENV.lower() == "production":
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Mock Google authentication is strictly prohibited in production.",
             )
-        raw_id = token_str.replace("mock-google-token-", "").replace("google-token-", "") or "learner@gmail.com"
+        raw_id = token_str.replace("mock-google-token-", "").strip() or "learner@gmail.com"
         email = raw_id if "@" in raw_id else f"{raw_id}@gmail.com"
         name = email.split("@")[0].replace(".", " ").replace("_", " ").title()
         sub = f"google-sub-{abs(hash(email)) % 100000000000000000000:021d}"

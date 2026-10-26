@@ -163,6 +163,10 @@ class SpecialBlockEndOut(BaseModel):
 
 class RootCauseSubQuestionsIn(BaseModel):
     question_id: int
+    assessment_id: int | None = None
+    selected_answer: str | None = None
+    response_time_ms: int = 15000
+    timed_out: bool = False
 
 
 class RootCauseSubQuestionsOut(BaseModel):
@@ -172,16 +176,20 @@ class RootCauseSubQuestionsOut(BaseModel):
     main_question_stem: str
     sub_questions: list[dict[str, Any]]
     has_sub_questions: bool = True
+    parent_response_id: int | None = None
     message: str | None = None
 
 
 class RootCauseEvaluateIn(BaseModel):
     question_id: int
-    formula_correct: bool
-    substitution_correct: bool
-    calculation_correct: bool
+    assessment_id: int | None = None
+    parent_response_id: int | None = None
+    formula_correct: bool = True
+    substitution_correct: bool = True
+    calculation_correct: bool = True
     calculation_time_ms: int = 0
     time_threshold_ms: int = 20000
+    sub_responses: list[dict[str, Any]] | None = None
 
 
 class RootCauseEvaluateOut(BaseModel):

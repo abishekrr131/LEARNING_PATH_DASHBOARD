@@ -92,6 +92,7 @@ def allocate_questions_largest_remainder(
 
 class DiagnosticStartIn(BaseModel):
     target_id: int | None = None
+    retake: bool = False
 
 
 class ItemSubmitIn(BaseModel):
@@ -105,6 +106,88 @@ class ItemSubmitIn(BaseModel):
 class DiagnosticSubmitIn(BaseModel):
     assessment_id: int
     responses: list[ItemSubmitIn]
+
+
+@router.get("/status")
+def get_diagnostic_status(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Returns persistent diagnostic completion status for the authenticated user."""
+    completed_asmt = db.execute(
+        select(Assessment)
+        .where(
+            Assessment.user_id == current_user.id,
+            Assessment.type == "initial",
+            Assessment.completed_at.is_not(None),
+        )
+        .order_by(Assessment.completed_at.desc())
+    ).scalars().first()
+
+    if completed_asmt:
+        total_questions = db.execute(
+            select(func.count(AssessmentQuestion.id))
+            .where(AssessmentQuestion.assessment_id == completed_asmt.id)
+        ).scalar() or 0
+
+        correct_count = db.execute(
+            select(func.count(StudentResponse.id))
+            .where(
+                StudentResponse.assessment_id == completed_asmt.id,
+                StudentResponse.user_id == current_user.id,
+                StudentResponse.is_correct.is_(True),
+            )
+        ).scalar() or 0
+
+        target = db.get(CareerTarget, completed_asmt.target_id)
+
+        return {
+            "is_completed": True,
+            "status": "completed",
+            "assessment_id": completed_asmt.id,
+            "completed_at": completed_asmt.completed_at.isoformat() if completed_asmt.completed_at else None,
+            "score": completed_asmt.score,
+            "total_questions": total_questions if total_questions > 0 else 10,
+            "correct_answers": correct_count,
+            "target_id": completed_asmt.target_id,
+            "target_name": target.name if target else "Unknown",
+        }
+
+    active_asmt = db.execute(
+        select(Assessment)
+        .where(
+            Assessment.user_id == current_user.id,
+            Assessment.type == "initial",
+            Assessment.completed_at.is_(None),
+        )
+        .order_by(Assessment.started_at.desc())
+    ).scalars().first()
+
+    if active_asmt:
+        target = db.get(CareerTarget, active_asmt.target_id)
+        return {
+            "is_completed": False,
+            "status": "in_progress",
+            "assessment_id": active_asmt.id,
+            "completed_at": None,
+            "score": None,
+            "total_questions": 10,
+            "correct_answers": 0,
+            "target_id": active_asmt.target_id,
+            "target_name": target.name if target else "Unknown",
+        }
+
+    return {
+        "is_completed": False,
+        "status": "not_started",
+        "assessment_id": None,
+        "completed_at": None,
+        "score": None,
+        "total_questions": 10,
+        "correct_answers": 0,
+        "target_id": None,
+        "target_name": None,
+    }
 
 
 @router.post("/start")
@@ -124,6 +207,21 @@ def start_diagnostic(
     target = db.get(CareerTarget, target_id)
     if not target:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Target not found")
+
+    # Check if user already completed an initial diagnostic
+    completed_asmt = db.execute(
+        select(Assessment).where(
+            Assessment.user_id == current_user.id,
+            Assessment.type == "initial",
+            Assessment.completed_at.is_not(None),
+        ).order_by(Assessment.completed_at.desc())
+    ).scalars().first()
+
+    if completed_asmt and not req.retake:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Initial diagnostic assessment has already been completed.",
+        )
 
     # Check for active incomplete diagnostic session to support instant resume on refresh
     active_asmt = db.execute(
@@ -228,6 +326,22 @@ def submit_diagnostic(
     assessment = db.get(Assessment, req.assessment_id)
     if not assessment or assessment.user_id != current_user.id:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Assessment not found")
+
+    if assessment.completed_at is not None:
+        cov_readiness = calculate_coverage_readiness(
+            db=db,
+            user_id=current_user.id,
+            target_id=assessment.target_id,
+        )
+        overall_readiness = cov_readiness.get("readiness_score") or 0.0
+        return {
+            "assessment_id": assessment.id,
+            "status": "completed",
+            "score": round(assessment.score or 0.0, 1),
+            "readiness_score": overall_readiness,
+            "readiness_percentage": round(overall_readiness * 100, 1),
+            "message": "Assessment was already submitted and scored.",
+        }
 
     answered_at = dt.datetime.now(dt.timezone.utc)
     target = db.get(CareerTarget, assessment.target_id)

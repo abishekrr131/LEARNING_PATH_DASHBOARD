@@ -36,11 +36,45 @@ from backend.app.core.config import settings
 limiter = Limiter(key_func=get_remote_address, default_limits=["120/minute"])
 
 
+import asyncio
+import logging
+from backend.app.db.session import engine, SessionLocal
+from backend.app.models.core import Base
+from backend.app.services.weekly_adaptation import run_scheduled_weekly_adaptation_job
+
+logger = logging.getLogger(__name__)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # App startup logic
+    # App startup logic: ensure database tables exist
+    Base.metadata.create_all(bind=engine)
+
+    # Start recurring background scheduler task for weekly adaptation
+    async def scheduled_weekly_adaptation_worker():
+        while True:
+            try:
+                # Sleep interval between scheduler sweeps (checks every hour)
+                await asyncio.sleep(3600)
+                with SessionLocal() as db:
+                    run_scheduled_weekly_adaptation_job(db)
+            except asyncio.CancelledError:
+                break
+            except Exception as exc:
+                logger.error("Error during scheduled weekly adaptation: %s", exc)
+                await asyncio.sleep(60)
+
+    worker_task = asyncio.create_task(scheduled_weekly_adaptation_worker())
+    app.state.adaptation_worker_task = worker_task
+
     yield
-    # App shutdown logic
+
+    # App shutdown logic: gracefully cancel background worker
+    worker_task.cancel()
+    try:
+        await worker_task
+    except asyncio.CancelledError:
+        pass
 
 
 app = FastAPI(

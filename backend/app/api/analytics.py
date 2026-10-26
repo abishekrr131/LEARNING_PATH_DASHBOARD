@@ -26,9 +26,15 @@ from backend.app.models.core import (
 )
 from backend.app.services.root_cause import (
     attention_entropy,
+    classify_error_evidence,
     get_ancestors_within_hops,
     present_as_mode,
     rank_root_cause_candidates,
+    verify_graph_prerequisites,
+)
+from backend.app.services.weekly_adaptation import (
+    compute_weekly_adaptation,
+    get_weekly_adaptation_summary,
 )
 from backend.app.services.scoring import (
     adaptive_priority,
@@ -349,7 +355,7 @@ def get_gap_analytics(
     sched_rows = db.execute(
         select(LearningSchedule)
         .where(LearningSchedule.user_id == current_user.id)
-        .order_by(LearningSchedule.scheduled_date)
+        .order_by(LearningSchedule.scheduled_date, LearningSchedule.id)
     ).scalars().all()
 
     if latest_diagnostic and not sched_rows:
@@ -360,6 +366,12 @@ def get_gap_analytics(
             db=db,
             week_number=1,
         )
+        db.commit()
+
+    today = dt.date.today()
+    if sched_rows and any(s.scheduled_date < today for s in sched_rows if s.status == "pending"):
+        for idx, s_item in enumerate(sched_rows):
+            s_item.scheduled_date = today + dt.timedelta(days=idx)
         db.commit()
 
     week_1_plan = []
@@ -439,59 +451,209 @@ def get_root_cause_analytics(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """Returns root-cause attribution with honesty guard:
-    - Normalised entropy H_bar (F8)
-    - present_as: 'two_candidates' if H_bar > 0.7, else 'single_cause' (Screen 13).
+    """Returns root-cause prerequisite attribution (Phase 4):
+    - Validates curriculum concept mapping and DAG prerequisite ancestors.
+    - Classifies cognitive error type from student response and diagnostic probe evidence.
+    - Computes attention weights and normalized entropy H_bar (F8) with honesty guard.
+    - Explicitly returns attribution states:
+      'valid_attribution', 'no_valid_prerequisites', 'missing_graph_mapping', 'insufficient_evidence'.
     """
     profile = db.execute(
         select(LearnerProfile).where(LearnerProfile.user_id == current_user.id)
     ).scalar_one_or_none()
     target_id = profile.target_id if profile else 1
 
-    # If no concept_id specified, pick the weakest concept
-    if not concept_id:
-        weakest = db.execute(
-            select(StudentMastery)
-            .where(StudentMastery.user_id == current_user.id)
-            .order_by(StudentMastery.mastery_score.asc())
-        ).scalars().first()
-        if weakest:
-            concept_id = weakest.concept_id
-        else:
-            first_c = db.execute(select(Concept.id)).scalars().first()
-            concept_id = first_c or 1
-
-    surface_concept = db.get(Concept, concept_id)
-    if not surface_concept:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Concept not found")
-
-    # Build DAG
-    deps = db.execute(select(ConceptDependency)).scalars().all()
-    g = SimpleDiGraph([(d.prerequisite_id, d.concept_id) for d in deps])
-    ancestors = get_ancestors_within_hops(g, surface_concept.id, max_hops=2)
-
-    # Masteries for candidates
+    # Masteries map for user
     masteries = db.execute(
         select(StudentMastery).where(StudentMastery.user_id == current_user.id)
     ).scalars().all()
     mastery_map = {m.concept_id: m.mastery_score for m in masteries}
 
-    # Concept names
-    all_cs = db.execute(select(Concept)).scalars().all()
-    name_map = {c.id: c.name for c in all_cs}
+    # Load target info and all curriculum concepts in target for concept selection dropdown
+    target_obj = db.get(CareerTarget, target_id)
+    target_name = target_obj.name if target_obj else "General Curriculum"
 
-    candidates = rank_root_cause_candidates(
-        surface_concept_id=surface_concept.id,
-        ancestors_with_hops=ancestors,
-        concept_mastery=mastery_map,
-        concept_names=name_map,
-    )
+    target_concepts_rows = db.execute(
+        select(Concept, Topic.name, Skill.name)
+        .join(Topic, Concept.topic_id == Topic.id)
+        .join(Skill, Topic.skill_id == Skill.id)
+        .where(Skill.target_id == target_id)
+        .order_by(Topic.id, Concept.id)
+    ).all()
 
-    alphas = [c["attention_alpha"] for c in candidates]
-    raw_h, norm_h = attention_entropy(alphas)
-    presentation_mode = present_as_mode(norm_h)
+    # Query all user responses across target to compute mistake counts per concept
+    all_user_resps = db.execute(
+        select(StudentResponse.question_id, StudentResponse.is_correct, Question.concept_id)
+        .join(Question, StudentResponse.question_id == Question.id)
+        .where(StudentResponse.user_id == current_user.id)
+    ).all()
+    mistakes_by_concept: dict[int, int] = {}
+    attempts_by_concept: dict[int, int] = {}
+    for qid, is_corr, cid in all_user_resps:
+        attempts_by_concept[cid] = attempts_by_concept.get(cid, 0) + 1
+        if not is_corr:
+            mistakes_by_concept[cid] = mistakes_by_concept.get(cid, 0) + 1
+
+    target_concepts_list = []
+    for c_obj, tname, sname in target_concepts_rows:
+        m_score = mastery_map.get(c_obj.id, 0.50)
+        m_cnt = mistakes_by_concept.get(c_obj.id, 0)
+        att_cnt = attempts_by_concept.get(c_obj.id, 0)
+        is_weak = (m_score < 0.65) or (m_cnt > 0)
+        target_concepts_list.append({
+            "concept_id": c_obj.id,
+            "concept_name": c_obj.name,
+            "topic_name": tname,
+            "skill_name": sname,
+            "mastery": round(m_score, 2),
+            "mistakes_count": m_cnt,
+            "attempts_count": att_cnt,
+            "is_weak": is_weak,
+        })
+
+    # If no concept_id specified, pick the first concept with mistakes, or weakest assessed concept
+    if not concept_id:
+        concepts_with_mistakes = [tc for tc in target_concepts_list if tc["mistakes_count"] > 0]
+        if concepts_with_mistakes:
+            concept_id = concepts_with_mistakes[0]["concept_id"]
+        else:
+            weakest = db.execute(
+                select(StudentMastery)
+                .where(StudentMastery.user_id == current_user.id)
+                .order_by(StudentMastery.mastery_score.asc())
+            ).scalars().first()
+            if weakest:
+                concept_id = weakest.concept_id
+            else:
+                first_c = db.execute(select(Concept.id)).scalars().first()
+                concept_id = first_c or 1
+
+    surface_concept = db.get(Concept, concept_id)
+    if not surface_concept:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Concept not found")
 
     surface_mastery = mastery_map.get(surface_concept.id, 0.45)
+
+    # Concept names and all curriculum concept IDs
+    all_cs = db.execute(select(Concept)).scalars().all()
+    name_map = {c.id: c.name for c in all_cs}
+    all_concept_ids = {c.id for c in all_cs}
+
+    # Build curriculum DAG
+    deps = db.execute(select(ConceptDependency)).scalars().all()
+    g = SimpleDiGraph([(d.prerequisite_id, d.concept_id) for d in deps])
+    # Ensure all nodes exist in graph
+    for cid in all_concept_ids:
+        g.add_node(cid)
+
+    # Verify prerequisite relationship on DAG
+    attr_state, ancestors = verify_graph_prerequisites(
+        graph=g,
+        all_concept_ids=all_concept_ids,
+        concept_id=surface_concept.id,
+        max_hops=2,
+    )
+
+    # Query student's responses on this surface concept
+    user_resps = db.execute(
+        select(StudentResponse)
+        .join(Question, StudentResponse.question_id == Question.id)
+        .where(
+            StudentResponse.user_id == current_user.id,
+            Question.concept_id == surface_concept.id,
+        )
+        .order_by(StudentResponse.answered_at.desc())
+    ).scalars().all()
+
+    # Detailed mistake history for surface concept
+    recent_mistakes = []
+    for resp in user_resps:
+        if not resp.is_correct:
+            q = db.get(Question, resp.question_id)
+            if q:
+                recent_mistakes.append({
+                    "response_id": resp.id,
+                    "question_id": q.id,
+                    "question_text": q.question_text,
+                    "options": q.options,
+                    "user_answer": getattr(resp, "selected_answer", getattr(resp, "selected_option", "")),
+                    "correct_answer": q.correct_answer,
+                    "explanation": q.explanation or "Standard step-by-step syllabus solution.",
+                    "response_time_ms": resp.response_time_ms,
+                    "answered_at": resp.answered_at.isoformat() if resp.answered_at else None,
+                })
+
+    # Ancestor mistakes (prerequisite mistakes demonstrating upstream root cause)
+    ancestor_mistakes = []
+    for aid in ancestors:
+        anc_resps = db.execute(
+            select(StudentResponse, Question)
+            .join(Question, StudentResponse.question_id == Question.id)
+            .where(
+                StudentResponse.user_id == current_user.id,
+                Question.concept_id == aid,
+                StudentResponse.is_correct == False,
+            )
+            .order_by(StudentResponse.answered_at.desc())
+            .limit(3)
+        ).all()
+        for a_resp, a_q in anc_resps:
+            ancestor_mistakes.append({
+                "ancestor_concept_id": aid,
+                "ancestor_concept_name": name_map.get(aid, f"Concept {aid}"),
+                "question_id": a_q.id,
+                "question_text": a_q.question_text,
+                "user_answer": getattr(a_resp, "selected_answer", getattr(a_resp, "selected_option", "")),
+                "correct_answer": a_q.correct_answer,
+                "explanation": a_q.explanation or "Standard step-by-step solution.",
+            })
+
+    # Direct incoming and outgoing prerequisite edges
+    direct_prerequisites = []
+    for p_id in g.predecessors(surface_concept.id):
+        p_c = db.get(Concept, p_id)
+        if p_c:
+            direct_prerequisites.append({
+                "concept_id": p_c.id,
+                "concept_name": p_c.name,
+                "mastery": round(mastery_map.get(p_c.id, 0.5), 2),
+            })
+
+    direct_dependents = []
+    for d_id in g.successors(surface_concept.id):
+        d_c = db.get(Concept, d_id)
+        if d_c:
+            direct_dependents.append({
+                "concept_id": d_c.id,
+                "concept_name": d_c.name,
+                "mastery": round(mastery_map.get(d_c.id, 0.5), 2),
+            })
+
+    failed_resp = next((r for r in user_resps if not r.is_correct), None)
+    sub_resps = []
+    if failed_resp:
+        sub_resps = db.execute(
+            select(StudentResponse)
+            .where(StudentResponse.parent_response_id == failed_resp.id)
+        ).scalars().all()
+
+    concept_acc = (sum(1 for r in user_resps if r.is_correct) / len(user_resps)) if user_resps else None
+    failed_q = db.get(Question, failed_resp.question_id) if failed_resp else None
+
+    # Classify cognitive error
+    error_classification = classify_error_evidence(
+        main_response=failed_resp,
+        sub_responses=sub_resps,
+        question=failed_q,
+        user_concept_accuracy=concept_acc,
+        prerequisite_mastery={aid: mastery_map.get(aid, 0.5) for aid in ancestors},
+    )
+
+    # Check for insufficient evidence if graph mapping exists but user has no history/failures
+    if attr_state == "valid_attribution" and not user_resps and surface_mastery >= 0.70:
+        final_state = "insufficient_evidence"
+    else:
+        final_state = attr_state
 
     # Diagnosed cognitive gaps from 3 sub-question stages
     rc_records = db.execute(
@@ -514,17 +676,93 @@ def get_root_cause_analytics(
                 "diagnosed_at": r.created_at.isoformat() if r.created_at else None,
             })
 
+    if final_state == "valid_attribution":
+        # Extract diagnostic evidence from sub-responses if available
+        diag_evidence = {}
+        for sr in sub_resps:
+            sq = db.get(Question, sr.question_id)
+            if sq and sq.concept_id in ancestors:
+                diag_evidence[sq.concept_id] = sr.is_correct
+
+        candidates = rank_root_cause_candidates(
+            surface_concept_id=surface_concept.id,
+            ancestors_with_hops=ancestors,
+            concept_mastery=mastery_map,
+            concept_names=name_map,
+            diagnostic_sub_evidence=diag_evidence,
+        )
+
+        alphas = [c["attention_alpha"] for c in candidates]
+        raw_h, norm_h = attention_entropy(alphas)
+        presentation_mode = present_as_mode(norm_h)
+        remediation_concept_id = candidates[0]["candidate_concept_id"] if candidates else surface_concept.id
+        remediation_concept_name = candidates[0]["candidate_name"] if candidates else surface_concept.name
+        honesty_disclaimer = "Graph-attention attribution computed across 2-hop prerequisite neighborhood."
+    elif final_state == "no_valid_prerequisites":
+        candidates = []
+        raw_h = None
+        norm_h = None
+        presentation_mode = "no_prerequisites"
+        remediation_concept_id = surface_concept.id
+        remediation_concept_name = surface_concept.name
+        honesty_disclaimer = f"'{surface_concept.name}' is a foundational root node in the curriculum graph with no prior prerequisites."
+    elif final_state == "missing_graph_mapping":
+        candidates = []
+        raw_h = None
+        norm_h = None
+        presentation_mode = "missing_graph_mapping"
+        remediation_concept_id = surface_concept.id
+        remediation_concept_name = surface_concept.name
+        honesty_disclaimer = f"Concept '{surface_concept.name}' is not currently linked in the curriculum dependency DAG."
+    else:  # insufficient_evidence
+        candidates = []
+        raw_h = None
+        norm_h = None
+        presentation_mode = "insufficient_evidence"
+        remediation_concept_id = surface_concept.id
+        remediation_concept_name = surface_concept.name
+        honesty_disclaimer = "No failed question attempts recorded for this concept. Further practice drills will calibrate prerequisite attribution."
+
     return {
+        "target_name": target_name,
         "surface_concept_id": surface_concept.id,
         "surface_concept_name": surface_concept.name,
         "surface_mastery": round(surface_mastery, 2),
+        "attribution_state": final_state,
         "candidates": candidates,
-        "attention_entropy": round(norm_h, 3),
-        "raw_entropy": round(raw_h, 3),
+        "attention_entropy": round(norm_h, 3) if norm_h is not None else None,
+        "raw_entropy": round(raw_h, 3) if raw_h is not None else None,
         "present_as": presentation_mode,
-        "honesty_disclaimer": "This analysis is an estimate of cognitive prerequisites, not a guarantee.",
+        "error_classification": error_classification,
+        "remediation_concept_id": remediation_concept_id,
+        "remediation_concept_name": remediation_concept_name,
+        "honesty_disclaimer": honesty_disclaimer,
         "cognitive_gaps": cognitive_gaps,
+        "target_concepts": target_concepts_list,
+        "recent_mistakes": recent_mistakes,
+        "ancestor_mistakes": ancestor_mistakes,
+        "direct_prerequisites": direct_prerequisites,
+        "direct_dependents": direct_dependents,
     }
+
+
+@router.get("/weekly-snapshots")
+def get_weekly_snapshots(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Returns rolling 7-day adaptation summary, WoW comparison, and root causes (Phase 5)."""
+    return get_weekly_adaptation_summary(db=db, user_id=current_user.id)
+
+
+@router.post("/refresh-weekly")
+def refresh_weekly_adaptation(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Authorized manual refresh for weekly adaptation calculation."""
+    compute_weekly_adaptation(db=db, user_id=current_user.id, force=True)
+    return get_weekly_adaptation_summary(db=db, user_id=current_user.id)
 
 
 @router.get("/readiness")
@@ -551,3 +789,133 @@ def get_career_map_analytics(
 
     return calculate_career_ready_map(db=db, user_id=current_user.id, target_id=target_id)
 
+
+
+@router.get("/mistake-history")
+def get_mistake_history(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Returns assessment sessions (Initial Diagnostic, Week 1 Mistakes, Week 2 Mistakes, etc.)
+    with the student's mistakes, selected options, correct answers, and explanations.
+    """
+    # Fetch all completed assessments for the current user in chronological order
+    assessments = db.execute(
+        select(Assessment)
+        .where(
+            Assessment.user_id == current_user.id,
+            Assessment.completed_at.is_not(None),
+        )
+        .order_by(Assessment.completed_at.asc())
+    ).scalars().all()
+
+    weekly_count = 0
+    initial_count = 0
+    practice_count = 0
+
+    sessions = []
+    for asmt in assessments:
+        # Determine title according to session type
+        if asmt.type == "initial":
+            initial_count += 1
+            title = "Initial Diagnostic Mistakes" if initial_count == 1 else f"Initial Diagnostic (Retake {initial_count - 1}) Mistakes"
+            short_label = "Initial Diagnostic" if initial_count == 1 else f"Initial Diagnostic #{initial_count}"
+        elif asmt.type == "weekly_test":
+            weekly_count += 1
+            title = f"Week {weekly_count} Mistakes"
+            short_label = f"Week {weekly_count}"
+        elif asmt.type == "practice":
+            practice_count += 1
+            title = f"Practice Session #{practice_count} Mistakes"
+            short_label = f"Practice #{practice_count}"
+        elif asmt.type == "verification":
+            title = "Verification Probe Mistakes"
+            short_label = "Verification"
+        elif asmt.type == "special":
+            title = "Special Test Mode Mistakes"
+            short_label = "Special Test"
+        else:
+            title = f"{asmt.type.replace('_', ' ').title()} Mistakes"
+            short_label = asmt.type.replace('_', ' ').title()
+
+        # Query responses for this assessment with question, concept, topic, skill details
+        resps = db.execute(
+            select(
+                StudentResponse,
+                Question,
+                func.coalesce(Concept.name, "General Concept"),
+                func.coalesce(Topic.name, "General Topic"),
+                func.coalesce(Skill.name, "General Skill"),
+            )
+            .join(Question, StudentResponse.question_id == Question.id)
+            .outerjoin(Concept, Question.concept_id == Concept.id)
+            .outerjoin(Topic, Concept.topic_id == Topic.id)
+            .outerjoin(Skill, Topic.skill_id == Skill.id)
+            .where(StudentResponse.assessment_id == asmt.id)
+            .order_by(StudentResponse.id.asc())
+        ).all()
+
+        items = []
+        mistakes = []
+        correct_count = 0
+
+        for resp, q, concept_name, topic_name, skill_name in resps:
+            opts = q.options_json if isinstance(q.options_json, dict) else {}
+            corr_ans = q.correct_answer or ""
+            corr_text = opts.get(corr_ans, corr_ans)
+            sel_ans = resp.selected_answer
+            sel_text = opts.get(sel_ans, sel_ans) if sel_ans else ("Skipped" if resp.skipped else "No answer")
+
+            item_data = {
+                "question_id": q.id,
+                "question_text": q.question_text,
+                "options": opts,
+                "selected_answer": sel_ans,
+                "selected_text": sel_text,
+                "correct_answer": corr_ans,
+                "correct_text": corr_text,
+                "is_correct": bool(resp.is_correct),
+                "skipped": bool(resp.skipped),
+                "timed_out": bool(resp.timed_out),
+                "response_time_ms": resp.response_time_ms,
+                "explanation": q.explanation or "No explanation provided.",
+                "concept_name": concept_name,
+                "topic_name": topic_name,
+                "skill_name": skill_name,
+            }
+
+            items.append(item_data)
+            if resp.is_correct:
+                correct_count += 1
+            else:
+                mistakes.append(item_data)
+
+        total_q = len(items)
+        if total_q == 0:
+            continue
+
+        score_pct = round((correct_count / total_q) * 100, 1) if total_q > 0 else 0.0
+
+        sessions.append({
+            "assessment_id": asmt.id,
+            "type": asmt.type,
+            "title": title,
+            "short_label": short_label,
+            "completed_at": asmt.completed_at.isoformat() if asmt.completed_at else None,
+            "score": asmt.score if asmt.score is not None else score_pct,
+            "score_pct": score_pct,
+            "total_questions": total_q,
+            "correct_count": correct_count,
+            "mistakes_count": len(mistakes),
+            "mistakes": mistakes,
+            "all_items": items,
+        })
+
+    # Return newest sessions first
+    sessions.reverse()
+
+    return {
+        "total_sessions": len(sessions),
+        "total_mistakes": sum(s["mistakes_count"] for s in sessions),
+        "sessions": sessions,
+    }

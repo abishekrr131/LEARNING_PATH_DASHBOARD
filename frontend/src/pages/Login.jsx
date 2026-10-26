@@ -42,10 +42,6 @@ export default function Login() {
     }
   };
 
-  const handleDevBypass = async () => {
-    await handleGoogleCredential("google-token-learner.google@gmail.com");
-  };
-
   return (
     <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
       <div className="min-h-screen bg-slate-50 dark:bg-gray-950 flex flex-col justify-center items-center px-4 sm:px-6 lg:px-8">
@@ -105,16 +101,14 @@ export default function Login() {
                 />
               </div>
 
-              {/* Dev Test Bypass Option for Offline / Headless Development */}
-              {import.meta.env.DEV && (
-                <button
-                  type="button"
-                  disabled={inProgress || loading}
-                  onClick={handleDevBypass}
-                  className="mt-2 text-xs text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300 underline font-medium transition-colors"
-                >
-                  ⚡ Fast Dev Sign-In (test harness)
-                </button>
+              {(inProgress || loading) && (
+                <div className="flex items-center justify-center space-x-2 text-xs text-purple-600 dark:text-purple-400 font-medium pt-1">
+                  <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                  </svg>
+                  <span>Signing in with Google…</span>
+                </div>
               )}
             </div>
 

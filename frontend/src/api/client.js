@@ -117,10 +117,10 @@ export const assessmentApi = {
       method: "POST",
       body: JSON.stringify(data),
     }),
-  getSubQuestions: (questionId) =>
+  getSubQuestions: (questionId, payload = {}) =>
     apiRequest("/assessments/root-cause/sub-questions", {
       method: "POST",
-      body: JSON.stringify({ question_id: questionId }),
+      body: JSON.stringify({ question_id: questionId, ...payload }),
     }),
   evaluateRootCause: (data) =>
     apiRequest("/assessments/root-cause/evaluate", {
@@ -131,10 +131,11 @@ export const assessmentApi = {
 
 // --- Dedicated Initial Diagnostic Endpoints ---
 export const diagnosticApi = {
-  start: (targetId) =>
+  getStatus: () => apiRequest("/diagnostic/status"),
+  start: (targetId, retake = false) =>
     apiRequest("/diagnostic/start", {
       method: "POST",
-      body: JSON.stringify({ target_id: targetId }),
+      body: JSON.stringify({ target_id: targetId, retake }),
     }),
   submit: (assessmentId, responses) =>
     apiRequest("/diagnostic/submit", {
@@ -166,11 +167,17 @@ export const analyticsApi = {
     const query = conceptId ? `?concept_id=${conceptId}` : "";
     return apiRequest(`/analytics/root-causes${query}`);
   },
+  getWeeklySnapshots: () => apiRequest("/analytics/weekly-snapshots"),
+  refreshWeekly: () =>
+    apiRequest("/analytics/refresh-weekly", {
+      method: "POST",
+    }),
   getReadiness: () => apiRequest("/analytics/readiness"),
   getCareerMap: (targetId) => {
     const query = targetId ? `?target_id=${targetId}` : "";
     return apiRequest(`/analytics/career-map${query}`);
   },
+  getMistakeHistory: () => apiRequest("/analytics/mistake-history"),
 };
 
 // --- Learning Path & Resources Endpoints ---

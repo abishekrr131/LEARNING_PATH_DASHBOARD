@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { diagnosticApi } from "../api/client";
@@ -8,8 +8,24 @@ export default function AssessmentInstructions() {
   const navigate = useNavigate();
   const [isStarting, setIsStarting] = useState(false);
   const [error, setError] = useState(null);
+  const [existingStatus, setExistingStatus] = useState(null);
+
+  useEffect(() => {
+    diagnosticApi.getStatus()
+      .then((status) => {
+        setExistingStatus(status);
+        if (status?.is_completed) {
+          // If already completed, user can go directly to result
+        }
+      })
+      .catch(() => null);
+  }, []);
 
   const handleStartDiagnostic = async () => {
+    if (existingStatus?.is_completed) {
+      navigate(`/result/${existingStatus.assessment_id}`);
+      return;
+    }
     setIsStarting(true);
     setError(null);
     const targetId = profile?.target_id || 1;
@@ -105,6 +121,8 @@ export default function AssessmentInstructions() {
                 <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
                 <span>Generating your diagnostic…</span>
               </>
+            ) : existingStatus?.is_completed ? (
+              <span>Review Diagnostic Results (Completed ✓) →</span>
             ) : (
               <span>Start Initial Diagnostic Assessment →</span>
             )}

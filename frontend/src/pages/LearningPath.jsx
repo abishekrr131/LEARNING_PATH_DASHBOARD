@@ -1,15 +1,18 @@
 import React, { useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import MainLayout from "../layouts/MainLayout";
 import { learningApi } from "../api/client";
 
 export default function LearningPath() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const targetConceptId = searchParams.get("concept_id") ? parseInt(searchParams.get("concept_id")) : null;
+
   const [data, setData] = useState(null);
   const [careerMap, setCareerMap] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [activeTab, setActiveTab] = useState("career-map"); // 'career-map' | 'dag-path'
+  const [activeTab, setActiveTab] = useState(targetConceptId ? "dag-path" : "career-map");
   const [filter, setFilter] = useState("all"); // 'all', 'remediation', 'ready', 'mastered'
   const [selectedNode, setSelectedNode] = useState(null);
 
@@ -24,12 +27,20 @@ export default function LearningPath() {
         setData(pathData);
         setCareerMap(mapData);
         if (pathData?.path?.length > 0) {
-          setSelectedNode(pathData.path[0]);
+          const matched = targetConceptId
+            ? pathData.path.find((n) => n.concept_id === targetConceptId)
+            : null;
+          if (matched) {
+            setSelectedNode(matched);
+            setActiveTab("dag-path");
+          } else {
+            setSelectedNode(pathData.path[0]);
+          }
         }
       })
       .catch((err) => setError(err.message || "Failed to load learning path"))
       .finally(() => setLoading(false));
-  }, []);
+  }, [targetConceptId]);
 
   const path = data?.path || [];
   const filteredPath = path.filter((node) => {

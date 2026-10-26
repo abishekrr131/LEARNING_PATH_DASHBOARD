@@ -101,6 +101,10 @@ def get_weekly_test_status(
             "message": "Complete the Initial Diagnostic to generate your weekly schedule.",
         }
 
+    if scheduled_test.status == "pending" and scheduled_test.scheduled_date < today:
+        scheduled_test.scheduled_date = today + dt.timedelta(days=6)
+        db.commit()
+
     is_completed = (scheduled_test.status == "completed")
     is_due = (scheduled_test.scheduled_date <= today) and not is_completed
     is_overdue = (scheduled_test.scheduled_date < today) and not is_completed

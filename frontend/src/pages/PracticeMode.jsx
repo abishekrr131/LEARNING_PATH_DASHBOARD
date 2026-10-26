@@ -256,12 +256,35 @@ export default function PracticeMode() {
     triggerDiagnosticSubQuestions();
   };
 
-  // Trigger diagnostic sub-questions for speed test failure
-  const triggerDiagnosticSubQuestions = () => {
+  // Combined mode: Next question with prerequisite diagnostic sub-questions on error
+  const handleNextCombinedQuestion = () => {
+    const chosen = answers[currentIndex];
+    if (chosen !== undefined && currentItem) {
+      const isCorrect =
+        String(chosen).toUpperCase() ===
+        String(currentItem.correct_option || "").toUpperCase();
+      if (!isCorrect) {
+        triggerDiagnosticSubQuestions("combined");
+        return;
+      }
+    }
+    if (currentIndex + 1 < items.length) {
+      setCurrentIndex((prev) => prev + 1);
+    }
+  };
+
+  // Trigger diagnostic sub-questions for test failure
+  const triggerDiagnosticSubQuestions = (targetMode = activeMode) => {
     if (!currentItem) return;
     setLoading(true);
+    const chosen = answers[currentIndex];
     assessmentApi
-      .getSubQuestions(currentItem.question_id)
+      .getSubQuestions(currentItem.question_id, {
+        assessment_id: assessment?.assessment_id,
+        selected_answer: chosen,
+        response_time_ms: targetMode === "speed" ? (90 - speedTimeLeft) * 1000 : 15000,
+        timed_out: targetMode === "speed" && speedTimeLeft <= 1,
+      })
       .then((data) => {
         if (data && data.has_sub_questions && data.sub_questions?.length > 0) {
           setSubQuestionsData(data);
@@ -277,16 +300,16 @@ export default function PracticeMode() {
             {
               topic: currentItem.topic_name || currentItem.concept_name,
               stem: currentItem.question_text,
-              gap: "Speed / Accuracy Gap (Unclassified)",
-              studyTask: "Review topic fundamentals and timed drill techniques",
+              gap: targetMode === "speed" ? "Speed / Accuracy Gap (Unclassified)" : "Prerequisite Knowledge Gap",
+              studyTask: "Review topic fundamentals and prerequisite dependencies",
             },
           ]);
-          advanceSpeedQuestion();
+          advanceQuestion(targetMode);
         }
       })
       .catch((err) => {
         console.warn("Sub questions error:", err);
-        advanceSpeedQuestion();
+        advanceQuestion(targetMode);
       })
       .finally(() => setLoading(false));
   };
@@ -314,23 +337,28 @@ export default function PracticeMode() {
     if (subQuestionIndex + 1 < subQuestionsData.sub_questions.length) {
       setSubQuestionIndex((prev) => prev + 1);
     } else {
-      // Evaluate all 3 sub-responses
+      // Evaluate sub-responses
       const formulaResp = updatedResponses.find((r) =>
-        r.stage.includes("formula")
+        r.stage?.includes("formula")
       );
       const subResp = updatedResponses.find((r) =>
-        r.stage.includes("substitution")
+        r.stage?.includes("substitution")
       );
       const calcResp = updatedResponses.find((r) =>
-        r.stage.includes("calculation")
+        r.stage?.includes("calculation")
       );
+
+      const allSubCorrect = updatedResponses.every((r) => r.is_correct);
 
       const evalPayload = {
         question_id: currentItem.question_id,
-        formula_correct: formulaResp ? formulaResp.is_correct : false,
-        substitution_correct: subResp ? subResp.is_correct : false,
-        calculation_correct: calcResp ? calcResp.is_correct : false,
+        assessment_id: assessment?.assessment_id,
+        parent_response_id: subQuestionsData?.parent_response_id,
+        formula_correct: formulaResp ? formulaResp.is_correct : allSubCorrect,
+        substitution_correct: subResp ? subResp.is_correct : allSubCorrect,
+        calculation_correct: calcResp ? calcResp.is_correct : allSubCorrect,
         calculation_time_ms: 12000,
+        sub_responses: updatedResponses,
       };
 
       assessmentApi
@@ -359,19 +387,23 @@ export default function PracticeMode() {
     }
   };
 
-  // Continue to next speed question after reviewing root-cause diagnosis
-  const advanceSpeedQuestion = () => {
+  // Continue to next question after reviewing root-cause diagnosis
+  const advanceQuestion = (mode = activeMode) => {
     setIsDiagnosticSubFlow(false);
     setSubQuestionsData(null);
     setRootCauseResult(null);
     if (currentIndex + 1 < items.length) {
       setCurrentIndex((prev) => prev + 1);
-      setSpeedTimeLeft(90);
+      if (mode === "speed") {
+        setSpeedTimeLeft(90);
+      }
     } else {
       setCompleted(true);
       setInProgress(false);
     }
   };
+
+  const advanceSpeedQuestion = () => advanceQuestion("speed");
 
   // Format seconds into MM:SS
   const formatTime = (secs) => {
@@ -874,96 +906,201 @@ export default function PracticeMode() {
               </div>
             </div>
 
-            {/* Current Question Card */}
-            <div className="p-6 sm:p-8 bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm space-y-6">
-              <div className="flex items-center justify-between text-xs text-gray-400">
-                <span>
-                  Question {currentIndex + 1} of {items.length}
-                </span>
-                <button
-                  type="button"
-                  data-testid="flag-review-btn"
-                  onClick={() => toggleFlagged(currentIndex)}
-                  className={`px-3 py-1 rounded-lg border text-xs font-medium transition-all ${
-                    flagged[currentIndex]
-                      ? "bg-amber-50 dark:bg-amber-950/40 border-amber-400 text-amber-700 dark:text-amber-300"
-                      : "border-gray-200 dark:border-gray-700 text-gray-500 hover:border-gray-300"
-                  }`}
-                >
-                  {flagged[currentIndex] ? "★ Flagged for Review" : "☆ Flag for Review"}
-                </button>
-              </div>
+            {isDiagnosticSubFlow ? (
+              // Diagnostic Sub-Questions Interactive Flow in Combined Mode
+              <div
+                data-testid="sub-questions-flow"
+                className="p-6 sm:p-8 bg-white dark:bg-gray-900 rounded-2xl border-2 border-rose-300 dark:border-rose-900 shadow-lg space-y-6 animate-fadeIn"
+              >
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-100 dark:bg-rose-950 text-rose-700 dark:text-rose-300">
+                      🚨 Prerequisite Diagnostic Triggered
+                    </span>
+                    <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mt-1">
+                      Original Problem: "{currentItem.question_text?.slice(0, 70)}..."
+                    </h2>
+                  </div>
+                  <span className="text-xs font-bold text-gray-400">
+                    Step {subQuestionIndex + 1} of{" "}
+                    {subQuestionsData?.sub_questions?.length || 3}
+                  </span>
+                </div>
 
-              <p className="text-base sm:text-lg font-medium text-gray-900 dark:text-white leading-relaxed">
-                {currentItem.question_text || currentItem.stem}
-              </p>
-
-              {/* Options */}
-              <div className="space-y-3">
-                {optionList.map((opt) => {
-                  const isSelected = answers[currentIndex] === opt.key;
-                  return (
-                    <button
-                      key={opt.key}
-                      type="button"
-                      data-testid={`option-btn-${opt.key}`}
-                      onClick={() => handleSelectCombinedOption(opt.key)}
-                      className={`w-full p-4 rounded-xl border text-left text-sm transition-all flex items-center justify-between ${
-                        isSelected
-                          ? "border-purple-600 bg-purple-50 dark:bg-purple-950/40 text-purple-900 dark:text-purple-100 font-semibold"
-                          : "border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/60 hover:border-purple-300"
-                      }`}
-                    >
-                      <div className="flex items-center space-x-3">
-                        <span className="w-6 h-6 rounded-full flex items-center justify-center font-bold text-xs shrink-0 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
-                          {opt.key}
+                {rootCauseResult ? (
+                  <div
+                    data-testid="root-cause-result-banner"
+                    className="p-5 rounded-xl bg-purple-50 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-800 space-y-3"
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="text-xl">🎯</span>
+                      <h3 className="font-bold text-sm text-purple-900 dark:text-purple-200">
+                        Cognitive Gap Identified: {rootCauseResult.gap_type}
+                      </h3>
+                    </div>
+                    <p className="text-xs text-gray-700 dark:text-gray-300 leading-relaxed">
+                      {rootCauseResult.study_task}
+                    </p>
+                    <div className="pt-2">
+                      <button
+                        type="button"
+                        data-testid="continue-speed-btn"
+                        onClick={() => advanceQuestion("combined")}
+                        className="px-5 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-semibold shadow-sm transition-all"
+                      >
+                        Continue to Next Combined Question →
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  subQuestionsData?.sub_questions?.[subQuestionIndex] && (
+                    <div className="space-y-4">
+                      <div className="p-3 rounded-lg bg-gray-50 dark:bg-gray-800/60 border border-gray-100 dark:border-gray-800">
+                        <span className="text-xs font-bold uppercase tracking-wider text-rose-600 dark:text-rose-400 block mb-1">
+                          Stage:{" "}
+                          {subQuestionsData.sub_questions[subQuestionIndex].stage}
                         </span>
-                        <span>{opt.text}</span>
+                        <p className="text-sm font-medium text-gray-900 dark:text-white">
+                          {subQuestionsData.sub_questions[subQuestionIndex].stem}
+                        </p>
                       </div>
-                      {isSelected && (
-                        <span className="text-purple-600 dark:text-purple-400 font-bold text-xs">
-                          ● Selected
-                        </span>
-                      )}
-                    </button>
-                  );
-                })}
+
+                      <div className="space-y-2">
+                        {toOptionList(
+                          subQuestionsData.sub_questions[subQuestionIndex].options
+                        ).map((opt) => (
+                          <button
+                            key={opt.key}
+                            type="button"
+                            onClick={() => setSelectedSubOption(opt.key)}
+                            className={`w-full p-3 rounded-xl border text-left text-xs transition-all flex items-center justify-between ${
+                              selectedSubOption === opt.key
+                                ? "border-purple-600 bg-purple-50 dark:bg-purple-950/40 font-semibold text-purple-900 dark:text-purple-100"
+                                : "border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-purple-300"
+                            }`}
+                          >
+                            <span className="flex items-center gap-2">
+                              <span className="w-5 h-5 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center font-bold text-[10px]">
+                                {opt.key}
+                              </span>
+                              <span>{opt.text}</span>
+                            </span>
+                            {selectedSubOption === opt.key && (
+                              <span className="text-purple-600 text-xs font-bold">
+                                ✓
+                              </span>
+                            )}
+                          </button>
+                        ))}
+                      </div>
+
+                      <div className="flex justify-end pt-2">
+                        <button
+                          type="button"
+                          data-testid="confirm-sub-btn"
+                          disabled={selectedSubOption === null}
+                          onClick={handleConfirmSubAnswer}
+                          className="px-5 py-2 bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white rounded-xl text-xs font-semibold shadow-sm transition-all"
+                        >
+                          Verify Sub-Step →
+                        </button>
+                      </div>
+                    </div>
+                  )
+                )}
               </div>
+            ) : (
+              /* Current Question Card */
+              <div className="p-6 sm:p-8 bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm space-y-6">
+                <div className="flex items-center justify-between text-xs text-gray-400">
+                  <span>
+                    Question {currentIndex + 1} of {items.length}
+                  </span>
+                  <button
+                    type="button"
+                    data-testid="flag-review-btn"
+                    onClick={() => toggleFlagged(currentIndex)}
+                    className={`px-3 py-1 rounded-lg border text-xs font-medium transition-all ${
+                      flagged[currentIndex]
+                        ? "bg-amber-50 dark:bg-amber-950/40 border-amber-400 text-amber-700 dark:text-amber-300"
+                        : "border-gray-200 dark:border-gray-700 text-gray-500 hover:border-gray-300"
+                    }`}
+                  >
+                    {flagged[currentIndex] ? "★ Flagged for Review" : "☆ Flag for Review"}
+                  </button>
+                </div>
 
-              {/* Navigation controls */}
-              <div className="flex items-center justify-between pt-4 border-t border-gray-100 dark:border-gray-800">
-                <button
-                  type="button"
-                  data-testid="prev-combined-btn"
-                  disabled={currentIndex === 0}
-                  onClick={() => setCurrentIndex((prev) => Math.max(0, prev - 1))}
-                  className="px-4 py-2 text-xs font-semibold rounded-xl border border-gray-200 dark:border-gray-700 disabled:opacity-30 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
-                >
-                  ← Previous
-                </button>
+                <p className="text-base sm:text-lg font-medium text-gray-900 dark:text-white leading-relaxed">
+                  {currentItem.question_text || currentItem.stem}
+                </p>
 
-                <div className="flex items-center gap-2">
-                  {currentIndex + 1 < items.length ? (
-                    <button
-                      type="button"
-                      data-testid="next-combined-btn"
-                      onClick={() => setCurrentIndex((prev) => prev + 1)}
-                      className="px-6 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-semibold shadow-md transition-all"
-                    >
-                      Next →
-                    </button>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={handleSubmitCombinedTest}
-                      className="px-6 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold shadow-md transition-all"
-                    >
-                      Finish & Submit Test
-                    </button>
-                  )}
+                {/* Options */}
+                <div className="space-y-3">
+                  {optionList.map((opt) => {
+                    const isSelected = answers[currentIndex] === opt.key;
+                    return (
+                      <button
+                        key={opt.key}
+                        type="button"
+                        data-testid={`option-btn-${opt.key}`}
+                        onClick={() => handleSelectCombinedOption(opt.key)}
+                        className={`w-full p-4 rounded-xl border text-left text-sm transition-all flex items-center justify-between ${
+                          isSelected
+                            ? "border-purple-600 bg-purple-50 dark:bg-purple-950/40 text-purple-900 dark:text-purple-100 font-semibold"
+                            : "border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/60 hover:border-purple-300"
+                        }`}
+                      >
+                        <div className="flex items-center space-x-3">
+                          <span className="w-6 h-6 rounded-full flex items-center justify-center font-bold text-xs shrink-0 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
+                            {opt.key}
+                          </span>
+                          <span>{opt.text}</span>
+                        </div>
+                        {isSelected && (
+                          <span className="text-purple-600 dark:text-purple-400 font-bold text-xs">
+                            ● Selected
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Navigation controls */}
+                <div className="flex items-center justify-between pt-4 border-t border-gray-100 dark:border-gray-800">
+                  <button
+                    type="button"
+                    data-testid="prev-combined-btn"
+                    disabled={currentIndex === 0}
+                    onClick={() => setCurrentIndex((prev) => Math.max(0, prev - 1))}
+                    className="px-4 py-2 text-xs font-semibold rounded-xl border border-gray-200 dark:border-gray-700 disabled:opacity-30 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
+                  >
+                    ← Previous
+                  </button>
+
+                  <div className="flex items-center gap-2">
+                    {currentIndex + 1 < items.length ? (
+                      <button
+                        type="button"
+                        data-testid="next-combined-btn"
+                        onClick={handleNextCombinedQuestion}
+                        className="px-6 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-semibold shadow-md transition-all"
+                      >
+                        Next →
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={handleSubmitCombinedTest}
+                        className="px-6 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold shadow-md transition-all"
+                      >
+                        Finish & Submit Test
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
           </div>
         )}
 

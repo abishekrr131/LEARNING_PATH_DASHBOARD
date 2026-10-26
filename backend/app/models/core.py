@@ -564,3 +564,25 @@ class ModelPrediction(Base):
     probability: Mapped[float] = mapped_column(Float)
     model_version: Mapped[str] = mapped_column(ForeignKey("model_runs.version"), index=True)
     created_at: Mapped[dt.datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class WeeklyAnalysisSnapshot(Base):
+    __tablename__ = "weekly_analysis_snapshots"
+    __table_args__ = (
+        Index("idx_weekly_snapshots_user_window", "user_id", "window_end"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    window_start: Mapped[dt.datetime] = mapped_column(DateTime(timezone=True))
+    window_end: Mapped[dt.datetime] = mapped_column(DateTime(timezone=True))
+    calculated_at: Mapped[dt.datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    total_attempts: Mapped[int] = mapped_column(Integer, default=0)
+    accuracy_pct: Mapped[float] = mapped_column(Float, default=0.0)
+    mastery_estimates_json: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
+    ranked_root_causes_json: Mapped[list[dict[str, Any]]] = mapped_column(JSON, default=list)
+    remediation_priorities_json: Mapped[list[dict[str, Any]]] = mapped_column(JSON, default=list)
+    wow_mastery_delta: Mapped[float] = mapped_column(Float, default=0.0)
+    model_version: Mapped[str] = mapped_column(String(80), default="weekly_adaptation_v1")
+
+    user: Mapped[User] = relationship("User")

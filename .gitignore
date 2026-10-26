@@ -55,3 +55,9 @@ frontend/.env
 .vscode/
 *.swp
 *.swo
+
+# Secrets and database backups
+*.bak
+*.backup
+*.db-journal
+*.sqlite-journal

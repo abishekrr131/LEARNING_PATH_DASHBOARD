@@ -1,0 +1,2585 @@
+[
+  {
+    "concept_id": 1,
+    "concept_name": "Vectors and Matrices",
+    "description": "Fundamental vector operations, norms, and matrix properties",
+    "topic_name": "Linear Algebra",
+    "skill_name": "Mathematics for ML",
+    "target_id": 1,
+    "target_name": "Machine Learning Engineering"
+  },
+  {
+    "concept_id": 2,
+    "concept_name": "Matrix Multiplication",
+    "description": "Linear transformations, inner and outer products",
+    "topic_name": "Linear Algebra",
+    "skill_name": "Mathematics for ML",
+    "target_id": 1,
+    "target_name": "Machine Learning Engineering"
+  },
+  {
+    "concept_id": 3,
+    "concept_name": "Matrix Inversion",
+    "description": "Invertibility, determinants, and singularity",
+    "topic_name": "Linear Algebra",
+    "skill_name": "Mathematics for ML",
+    "target_id": 1,
+    "target_name": "Machine Learning Engineering"
+  },
+  {
+    "concept_id": 4,
+    "concept_name": "Eigenvalues and Eigenvectors",
+    "description": "Spectral decomposition and characteristic equations",
+    "topic_name": "Linear Algebra",
+    "skill_name": "Mathematics for ML",
+    "target_id": 1,
+    "target_name": "Machine Learning Engineering"
+  },
+  {
+    "concept_id": 5,
+    "concept_name": "Derivatives and Gradients",
+    "description": "Partial derivatives, Jacobian, and gradient vectors",
+    "topic_name": "Calculus & Optimization",
+    "skill_name": "Mathematics for ML",
+    "target_id": 1,
+    "target_name": "Machine Learning Engineering"
+  },
+  {
+    "concept_id": 6,
+    "concept_name": "Gradient Descent",
+    "description": "First-order optimization, learning rates, and momentum",
+    "topic_name": "Calculus & Optimization",
+    "skill_name": "Mathematics for ML",
+    "target_id": 1,
+    "target_name": "Machine Learning Engineering"
+  },
+  {
+    "concept_id": 7,
+    "concept_name": "Stochastic Gradient Descent",
+    "description": "Mini-batch updates and variance reduction",
+    "topic_name": "Calculus & Optimization",
+    "skill_name": "Mathematics for ML",
+    "target_id": 1,
+    "target_name": "Machine Learning Engineering"
+  },
+  {
+    "concept_id": 8,
+    "concept_name": "Convexity and Loss Surfaces",
+    "description": "Convex functions, saddle points, and local minima",
+    "topic_name": "Calculus & Optimization",
+    "skill_name": "Mathematics for ML",
+    "target_id": 1,
+    "target_name": "Machine Learning Engineering"
+  },
+  {
+    "concept_id": 9,
+    "concept_name": "Probability Distributions",
+    "description": "Discrete and continuous random variables, PDFs and CDFs",
+    "topic_name": "Probability & Statistics",
+    "skill_name": "Mathematics for ML",
+    "target_id": 1,
+    "target_name": "Machine Learning Engineering"
+  },
+  {
+    "concept_id": 10,
+    "concept_name": "Conditional Probability",
+    "description": "Bayes' rule, independence, and joint distributions",
+    "topic_name": "Probability & Statistics",
+    "skill_name": "Mathematics for ML",
+    "target_id": 1,
+    "target_name": "Machine Learning Engineering"
+  },
+  {
+    "concept_id": 11,
+    "concept_name": "Maximum Likelihood Estimation",
+    "description": "Likelihood functions, log-likelihood, and parameter fitting",
+    "topic_name": "Probability & Statistics",
+    "skill_name": "Mathematics for ML",
+    "target_id": 1,
+    "target_name": "Machine Learning Engineering"
+  },
+  {
+    "concept_id": 12,
+    "concept_name": "Hypothesis Testing",
+    "description": "p-values, null hypothesis, and confidence intervals",
+    "topic_name": "Probability & Statistics",
+    "skill_name": "Mathematics for ML",
+    "target_id": 1,
+    "target_name": "Machine Learning Engineering"
+  },
+  {
+    "concept_id": 13,
+    "concept_name": "Linear Regression",
+    "description": "Ordinary least squares, residuals, and coefficient interpretation",
+    "topic_name": "Supervised Learning",
+    "skill_name": "Core Machine Learning",
+    "target_id": 1,
+    "target_name": "Machine Learning Engineering"
+  },
+  {
+    "concept_id": 14,
+    "concept_name": "L1 and L2 Regularization",
+    "description": "Lasso and Ridge penalty terms, sparsity, and overfitting prevention",
+    "topic_name": "Supervised Learning",
+    "skill_name": "Core Machine Learning",
+    "target_id": 1,
+    "target_name": "Machine Learning Engineering"
+  },
+  {
+    "concept_id": 15,
+    "concept_name": "Logistic Regression",
+    "description": "Sigmoid function, odds ratios, and log-loss",
+    "topic_name": "Supervised Learning",
+    "skill_name": "Core Machine Learning",
+    "target_id": 1,
+    "target_name": "Machine Learning Engineering"
+  },
+  {
+    "concept_id": 16,
+    "concept_name": "Decision Trees",
+    "description": "Information gain, Gini impurity, and recursive partitioning",
+    "topic_name": "Supervised Learning",
+    "skill_name": "Core Machine Learning",
+    "target_id": 1,
+    "target_name": "Machine Learning Engineering"
+  },
+  {
+    "concept_id": 17,
+    "concept_name": "Random Forests",
+    "description": "Bagging, bootstrap aggregation, and feature subsampling",
+    "topic_name": "Supervised Learning",
+    "skill_name": "Core Machine Learning",
+    "target_id": 1,
+    "target_name": "Machine Learning Engineering"
+  },
+  {
+    "concept_id": 18,
+    "concept_name": "Gradient Boosted Trees",
+    "description": "XGBoost, residual boosting, and tree ensembles",
+    "topic_name": "Supervised Learning",
+    "skill_name": "Core Machine Learning",
+    "target_id": 1,
+    "target_name": "Machine Learning Engineering"
+  },
+  {
+    "concept_id": 19,
+    "concept_name": "Support Vector Machines",
+    "description": "Margin maximization, support vectors, and kernel trick",
+    "topic_name": "Supervised Learning",
+    "skill_name": "Core Machine Learning",
+    "target_id": 1,
+    "target_name": "Machine Learning Engineering"
+  },
+  {
+    "concept_id": 20,
+    "concept_name": "K-Means Clustering",
+    "description": "Centroid updates, Voronoi cells, and inertia",
+    "topic_name": "Unsupervised Learning",
+    "skill_name": "Core Machine Learning",
+    "target_id": 1,
+    "target_name": "Machine Learning Engineering"
+  },
+  {
+    "concept_id": 21,
+    "concept_name": "Hierarchical Clustering",
+    "description": "Agglomerative merging and dendrograms",
+    "topic_name": "Unsupervised Learning",
+    "skill_name": "Core Machine Learning",
+    "target_id": 1,
+    "target_name": "Machine Learning Engineering"
+  },
+  {
+    "concept_id": 22,
+    "concept_name": "Principal Component Analysis",
+    "description": "Dimensionality reduction via covariance eigenvectors",
+    "topic_name": "Unsupervised Learning",
+    "skill_name": "Core Machine Learning",
+    "target_id": 1,
+    "target_name": "Machine Learning Engineering"
+  },
+  {
+    "concept_id": 23,
+    "concept_name": "t-SNE and UMAP",
+    "description": "Non-linear manifold learning and low-dimensional embeddings",
+    "topic_name": "Unsupervised Learning",
+    "skill_name": "Core Machine Learning",
+    "target_id": 1,
+    "target_name": "Machine Learning Engineering"
+  },
+  {
+    "concept_id": 24,
+    "concept_name": "Bias-Variance Tradeoff",
+    "description": "Model complexity, underfitting, and generalization error",
+    "topic_name": "Evaluation & Validation",
+    "skill_name": "Core Machine Learning",
+    "target_id": 1,
+    "target_name": "Machine Learning Engineering"
+  },
+  {
+    "concept_id": 25,
+    "concept_name": "Cross-Validation",
+    "description": "K-fold splitting, stratification, and validation leakage prevention",
+    "topic_name": "Evaluation & Validation",
+    "skill_name": "Core Machine Learning",
+    "target_id": 1,
+    "target_name": "Machine Learning Engineering"
+  },
+  {
+    "concept_id": 26,
+    "concept_name": "Confusion Matrix",
+    "description": "True positives, false positives, sensitivity, and specificity",
+    "topic_name": "Evaluation & Validation",
+    "skill_name": "Core Machine Learning",
+    "target_id": 1,
+    "target_name": "Machine Learning Engineering"
+  },
+  {
+    "concept_id": 27,
+    "concept_name": "Precision and Recall",
+    "description": "Precision-Recall tradeoff and F1 score computation",
+    "topic_name": "Evaluation & Validation",
+    "skill_name": "Core Machine Learning",
+    "target_id": 1,
+    "target_name": "Machine Learning Engineering"
+  },
+  {
+    "concept_id": 28,
+    "concept_name": "ROC and AUC",
+    "description": "Receiver operating characteristic curve and area under curve",
+    "topic_name": "Evaluation & Validation",
+    "skill_name": "Core Machine Learning",
+    "target_id": 1,
+    "target_name": "Machine Learning Engineering"
+  },
+  {
+    "concept_id": 29,
+    "concept_name": "Perceptrons and Activations",
+    "description": "Linear combination and non-linearities: ReLU, Sigmoid, Tanh",
+    "topic_name": "Neural Foundations",
+    "skill_name": "Deep Learning & Architectures",
+    "target_id": 1,
+    "target_name": "Machine Learning Engineering"
+  },
+  {
+    "concept_id": 30,
+    "concept_name": "Multilayer Perceptrons",
+    "description": "Dense feedforward networks and universal approximation",
+    "topic_name": "Neural Foundations",
+    "skill_name": "Deep Learning & Architectures",
+    "target_id": 1,
+    "target_name": "Machine Learning Engineering"
+  },
+  {
+    "concept_id": 31,
+    "concept_name": "Backpropagation",
+    "description": "Chain rule of calculus applied to computational graphs",
+    "topic_name": "Neural Foundations",
+    "skill_name": "Deep Learning & Architectures",
+    "target_id": 1,
+    "target_name": "Machine Learning Engineering"
+  },
+  {
+    "concept_id": 32,
+    "concept_name": "Vanishing and Exploding Gradients",
+    "description": "Gradient saturation, initialization, and normalization layers",
+    "topic_name": "Neural Foundations",
+    "skill_name": "Deep Learning & Architectures",
+    "target_id": 1,
+    "target_name": "Machine Learning Engineering"
+  },
+  {
+    "concept_id": 33,
+    "concept_name": "Convolutional Layers",
+    "description": "Kernel filters, stride, padding, and feature maps",
+    "topic_name": "Computer Vision & Sequence Models",
+    "skill_name": "Deep Learning & Architectures",
+    "target_id": 1,
+    "target_name": "Machine Learning Engineering"
+  },
+  {
+    "concept_id": 34,
+    "concept_name": "Pooling and Downsampling",
+    "description": "Max pooling, average pooling, and spatial invariance",
+    "topic_name": "Computer Vision & Sequence Models",
+    "skill_name": "Deep Learning & Architectures",
+    "target_id": 1,
+    "target_name": "Machine Learning Engineering"
+  },
+  {
+    "concept_id": 35,
+    "concept_name": "Recurrent Neural Networks",
+    "description": "Hidden state transitions and sequence unrolling",
+    "topic_name": "Computer Vision & Sequence Models",
+    "skill_name": "Deep Learning & Architectures",
+    "target_id": 1,
+    "target_name": "Machine Learning Engineering"
+  },
+  {
+    "concept_id": 36,
+    "concept_name": "LSTM and GRU",
+    "description": "Gating mechanisms, cell state, and long-term dependencies",
+    "topic_name": "Computer Vision & Sequence Models",
+    "skill_name": "Deep Learning & Architectures",
+    "target_id": 1,
+    "target_name": "Machine Learning Engineering"
+  },
+  {
+    "concept_id": 37,
+    "concept_name": "Self-Attention Mechanism",
+    "description": "Queries, keys, values, and scaled dot-product attention",
+    "topic_name": "Transformers",
+    "skill_name": "Deep Learning & Architectures",
+    "target_id": 1,
+    "target_name": "Machine Learning Engineering"
+  },
+  {
+    "concept_id": 38,
+    "concept_name": "Multi-Head Attention",
+    "description": "Parallel representation subspaces and projection matrices",
+    "topic_name": "Transformers",
+    "skill_name": "Deep Learning & Architectures",
+    "target_id": 1,
+    "target_name": "Machine Learning Engineering"
+  },
+  {
+    "concept_id": 39,
+    "concept_name": "Positional Encoding",
+    "description": "Sinusoidal and rotary position encodings for sequence order",
+    "topic_name": "Transformers",
+    "skill_name": "Deep Learning & Architectures",
+    "target_id": 1,
+    "target_name": "Machine Learning Engineering"
+  },
+  {
+    "concept_id": 40,
+    "concept_name": "Transformer Encoder-Decoder",
+    "description": "Layer normalization, residual connections, and feedforward blocks",
+    "topic_name": "Transformers",
+    "skill_name": "Deep Learning & Architectures",
+    "target_id": 1,
+    "target_name": "Machine Learning Engineering"
+  },
+  {
+    "concept_id": 41,
+    "concept_name": "Model Serialization",
+    "description": "ONNX, TorchScript, and pickle security/interoperability",
+    "topic_name": "Model Deployment",
+    "skill_name": "MLOps & Engineering",
+    "target_id": 1,
+    "target_name": "Machine Learning Engineering"
+  },
+  {
+    "concept_id": 42,
+    "concept_name": "Inference Serving",
+    "description": "FastAPI, Triton, latency profiling, and batching",
+    "topic_name": "Model Deployment",
+    "skill_name": "MLOps & Engineering",
+    "target_id": 1,
+    "target_name": "Machine Learning Engineering"
+  },
+  {
+    "concept_id": 43,
+    "concept_name": "Docker for ML",
+    "description": "Containerizing inference runtimes with CUDA support",
+    "topic_name": "Model Deployment",
+    "skill_name": "MLOps & Engineering",
+    "target_id": 1,
+    "target_name": "Machine Learning Engineering"
+  },
+  {
+    "concept_id": 44,
+    "concept_name": "Feature Stores",
+    "description": "Point-in-time joins, offline vs online feature sync",
+    "topic_name": "Monitoring & Pipelines",
+    "skill_name": "MLOps & Engineering",
+    "target_id": 1,
+    "target_name": "Machine Learning Engineering"
+  },
+  {
+    "concept_id": 45,
+    "concept_name": "Data and Concept Drift",
+    "description": "KS-test, Population Stability Index, and performance decay",
+    "topic_name": "Monitoring & Pipelines",
+    "skill_name": "MLOps & Engineering",
+    "target_id": 1,
+    "target_name": "Machine Learning Engineering"
+  },
+  {
+    "concept_id": 46,
+    "concept_name": "CI/CD for ML",
+    "description": "Automated model evaluation, linting, and regression tests",
+    "topic_name": "Monitoring & Pipelines",
+    "skill_name": "MLOps & Engineering",
+    "target_id": 1,
+    "target_name": "Machine Learning Engineering"
+  },
+  {
+    "concept_id": 47,
+    "concept_name": "ES6+ Syntax and Closures",
+    "description": "Arrow functions, destructuring, scope chains, and lexical closures",
+    "topic_name": "Modern JavaScript & DOM",
+    "skill_name": "Frontend Architecture",
+    "target_id": 2,
+    "target_name": "Full Stack Development"
+  },
+  {
+    "concept_id": 48,
+    "concept_name": "Asynchronous JS and Promises",
+    "description": "Event loop, microtask queue, Promises, and async/await",
+    "topic_name": "Modern JavaScript & DOM",
+    "skill_name": "Frontend Architecture",
+    "target_id": 2,
+    "target_name": "Full Stack Development"
+  },
+  {
+    "concept_id": 49,
+    "concept_name": "DOM Manipulation & Events",
+    "description": "Event delegation, bubbling, capturing, and DOM tree mutation",
+    "topic_name": "Modern JavaScript & DOM",
+    "skill_name": "Frontend Architecture",
+    "target_id": 2,
+    "target_name": "Full Stack Development"
+  },
+  {
+    "concept_id": 50,
+    "concept_name": "Web APIs and Fetch",
+    "description": "HTTP requests, XMLHttpRequest, Fetch API, and CORS fundamentals",
+    "topic_name": "Modern JavaScript & DOM",
+    "skill_name": "Frontend Architecture",
+    "target_id": 2,
+    "target_name": "Full Stack Development"
+  },
+  {
+    "concept_id": 51,
+    "concept_name": "JSX and Component Lifecycle",
+    "description": "Virtual DOM, JSX compilation, mounting, updating, and unmounting",
+    "topic_name": "React Fundamentals",
+    "skill_name": "Frontend Architecture",
+    "target_id": 2,
+    "target_name": "Full Stack Development"
+  },
+  {
+    "concept_id": 52,
+    "concept_name": "React Hooks: useState and useEffect",
+    "description": "Stateful components, effect dependencies, and cleanup functions",
+    "topic_name": "React Fundamentals",
+    "skill_name": "Frontend Architecture",
+    "target_id": 2,
+    "target_name": "Full Stack Development"
+  },
+  {
+    "concept_id": 53,
+    "concept_name": "Props and Component Composition",
+    "description": "Unidirectional data flow, children prop, and container-presenter patterns",
+    "topic_name": "React Fundamentals",
+    "skill_name": "Frontend Architecture",
+    "target_id": 2,
+    "target_name": "Full Stack Development"
+  },
+  {
+    "concept_id": 54,
+    "concept_name": "Custom Hooks",
+    "description": "Encapsulating and reusing stateful component logic",
+    "topic_name": "React Fundamentals",
+    "skill_name": "Frontend Architecture",
+    "target_id": 2,
+    "target_name": "Full Stack Development"
+  },
+  {
+    "concept_id": 55,
+    "concept_name": "Context API & Prop Drilling",
+    "description": "React Context provider-consumer pattern and rendering pitfalls",
+    "topic_name": "State Management & Routing",
+    "skill_name": "Frontend Architecture",
+    "target_id": 2,
+    "target_name": "Full Stack Development"
+  },
+  {
+    "concept_id": 56,
+    "concept_name": "Global State Stores",
+    "description": "Redux Toolkit, Zustand, immutability, and state selectors",
+    "topic_name": "State Management & Routing",
+    "skill_name": "Frontend Architecture",
+    "target_id": 2,
+    "target_name": "Full Stack Development"
+  },
+  {
+    "concept_id": 57,
+    "concept_name": "Client-Side Routing",
+    "description": "React Router, history API, dynamic route params, and route guards",
+    "topic_name": "State Management & Routing",
+    "skill_name": "Frontend Architecture",
+    "target_id": 2,
+    "target_name": "Full Stack Development"
+  },
+  {
+    "concept_id": 58,
+    "concept_name": "Server-Side Rendering (SSR)",
+    "description": "Next.js, hydration, SEO advantages, and static site generation (SSG)",
+    "topic_name": "State Management & Routing",
+    "skill_name": "Frontend Architecture",
+    "target_id": 2,
+    "target_name": "Full Stack Development"
+  },
+  {
+    "concept_id": 59,
+    "concept_name": "Node Event Loop and Libuv",
+    "description": "Call stack, poll phase, timer phase, check phase, and worker threads",
+    "topic_name": "Node.js & Async Runtime",
+    "skill_name": "Backend Systems & APIs",
+    "target_id": 2,
+    "target_name": "Full Stack Development"
+  },
+  {
+    "concept_id": 60,
+    "concept_name": "Streams and Buffers",
+    "description": "Readable/Writable streams, piping, backpressure, and binary buffers",
+    "topic_name": "Node.js & Async Runtime",
+    "skill_name": "Backend Systems & APIs",
+    "target_id": 2,
+    "target_name": "Full Stack Development"
+  },
+  {
+    "concept_id": 61,
+    "concept_name": "Node Modules & Package Management",
+    "description": "CommonJS vs ESM, package.json, semantic versioning, and npm lockfiles",
+    "topic_name": "Node.js & Async Runtime",
+    "skill_name": "Backend Systems & APIs",
+    "target_id": 2,
+    "target_name": "Full Stack Development"
+  },
+  {
+    "concept_id": 62,
+    "concept_name": "HTTP Protocols & Status Codes",
+    "description": "HTTP verbs, headers, status codes (2xx, 3xx, 4xx, 5xx), and idempotency",
+    "topic_name": "RESTful & GraphQL APIs",
+    "skill_name": "Backend Systems & APIs",
+    "target_id": 2,
+    "target_name": "Full Stack Development"
+  },
+  {
+    "concept_id": 63,
+    "concept_name": "RESTful Resource Design",
+    "description": "URI naming conventions, filtering, pagination, and HATEOAS",
+    "topic_name": "RESTful & GraphQL APIs",
+    "skill_name": "Backend Systems & APIs",
+    "target_id": 2,
+    "target_name": "Full Stack Development"
+  },
+  {
+    "concept_id": 64,
+    "concept_name": "API Validation & Middleware",
+    "description": "Express/FastAPI middleware pipelines, request validation, and error handlers",
+    "topic_name": "RESTful & GraphQL APIs",
+    "skill_name": "Backend Systems & APIs",
+    "target_id": 2,
+    "target_name": "Full Stack Development"
+  },
+  {
+    "concept_id": 65,
+    "concept_name": "GraphQL Schemas and Resolvers",
+    "description": "Queries, mutations, type definitions, and the N+1 resolver problem",
+    "topic_name": "RESTful & GraphQL APIs",
+    "skill_name": "Backend Systems & APIs",
+    "target_id": 2,
+    "target_name": "Full Stack Development"
+  },
+  {
+    "concept_id": 66,
+    "concept_name": "WebSockets and Real-time Communication",
+    "description": "Full-duplex TCP connections, socket handshakes, and event emitters",
+    "topic_name": "RESTful & GraphQL APIs",
+    "skill_name": "Backend Systems & APIs",
+    "target_id": 2,
+    "target_name": "Full Stack Development"
+  },
+  {
+    "concept_id": 67,
+    "concept_name": "JWT and Session Management",
+    "description": "Stateless tokens, access/refresh tokens, and HTTP-only cookies",
+    "topic_name": "Authentication & Security",
+    "skill_name": "Backend Systems & APIs",
+    "target_id": 2,
+    "target_name": "Full Stack Development"
+  },
+  {
+    "concept_id": 68,
+    "concept_name": "OAuth2 and OpenID Connect",
+    "description": "Authorization code grant, PKCE, token exchange, and identity providers",
+    "topic_name": "Authentication & Security",
+    "skill_name": "Backend Systems & APIs",
+    "target_id": 2,
+    "target_name": "Full Stack Development"
+  },
+  {
+    "concept_id": 69,
+    "concept_name": "Web Security: XSS and CSRF",
+    "description": "Cross-site scripting mitigation, CSP headers, and SameSite cookies",
+    "topic_name": "Authentication & Security",
+    "skill_name": "Backend Systems & APIs",
+    "target_id": 2,
+    "target_name": "Full Stack Development"
+  },
+  {
+    "concept_id": 70,
+    "concept_name": "SQL Injection & Input Sanitization",
+    "description": "Parameterized queries, prepared statements, and ORM defenses",
+    "topic_name": "Authentication & Security",
+    "skill_name": "Backend Systems & APIs",
+    "target_id": 2,
+    "target_name": "Full Stack Development"
+  },
+  {
+    "concept_id": 71,
+    "concept_name": "Rate Limiting and DDoS Mitigation",
+    "description": "Token bucket, leaky bucket algorithms, and Redis rate limiting",
+    "topic_name": "Authentication & Security",
+    "skill_name": "Backend Systems & APIs",
+    "target_id": 2,
+    "target_name": "Full Stack Development"
+  },
+  {
+    "concept_id": 72,
+    "concept_name": "Relational Modeling & Normalization",
+    "description": "1NF, 2NF, 3NF, primary keys, foreign keys, and relational schema design",
+    "topic_name": "Relational Databases & SQL",
+    "skill_name": "Databases & Data Modeling",
+    "target_id": 2,
+    "target_name": "Full Stack Development"
+  },
+  {
+    "concept_id": 73,
+    "concept_name": "Complex SQL Queries & Joins",
+    "description": "INNER, LEFT, RIGHT, FULL OUTER joins, subqueries, and window functions",
+    "topic_name": "Relational Databases & SQL",
+    "skill_name": "Databases & Data Modeling",
+    "target_id": 2,
+    "target_name": "Full Stack Development"
+  },
+  {
+    "concept_id": 74,
+    "concept_name": "Database Indexing & B-Trees",
+    "description": "B-Tree structure, composite indexes, query plans, and index selectivity",
+    "topic_name": "Relational Databases & SQL",
+    "skill_name": "Databases & Data Modeling",
+    "target_id": 2,
+    "target_name": "Full Stack Development"
+  },
+  {
+    "concept_id": 75,
+    "concept_name": "ACID Properties & Transactions",
+    "description": "Atomicity, consistency, isolation levels, durability, and deadlocks",
+    "topic_name": "Relational Databases & SQL",
+    "skill_name": "Databases & Data Modeling",
+    "target_id": 2,
+    "target_name": "Full Stack Development"
+  },
+  {
+    "concept_id": 76,
+    "concept_name": "ORMs and Query Optimization",
+    "description": "Prisma, SQLAlchemy, lazy loading, and avoiding N+1 queries",
+    "topic_name": "Relational Databases & SQL",
+    "skill_name": "Databases & Data Modeling",
+    "target_id": 2,
+    "target_name": "Full Stack Development"
+  },
+  {
+    "concept_id": 77,
+    "concept_name": "Document Stores: MongoDB",
+    "description": "BSON collections, aggregation pipelines, and sharding strategies",
+    "topic_name": "NoSQL & Caching Systems",
+    "skill_name": "Databases & Data Modeling",
+    "target_id": 2,
+    "target_name": "Full Stack Development"
+  },
+  {
+    "concept_id": 78,
+    "concept_name": "Key-Value Stores: Redis",
+    "description": "In-memory caching, TTL expiry, eviction policies, and pub/sub",
+    "topic_name": "NoSQL & Caching Systems",
+    "skill_name": "Databases & Data Modeling",
+    "target_id": 2,
+    "target_name": "Full Stack Development"
+  },
+  {
+    "concept_id": 79,
+    "concept_name": "Cache Invalidation Strategies",
+    "description": "Cache-aside, write-through, write-behind, and stale-while-revalidate",
+    "topic_name": "NoSQL & Caching Systems",
+    "skill_name": "Databases & Data Modeling",
+    "target_id": 2,
+    "target_name": "Full Stack Development"
+  },
+  {
+    "concept_id": 80,
+    "concept_name": "Docker Containerization",
+    "description": "Dockerfiles, layer caching, multi-stage builds, and container networking",
+    "topic_name": "Containers & CI/CD",
+    "skill_name": "DevOps & Cloud Infrastructure",
+    "target_id": 2,
+    "target_name": "Full Stack Development"
+  },
+  {
+    "concept_id": 81,
+    "concept_name": "Docker Compose",
+    "description": "Multi-service orchestration, port mapping, and named volumes",
+    "topic_name": "Containers & CI/CD",
+    "skill_name": "DevOps & Cloud Infrastructure",
+    "target_id": 2,
+    "target_name": "Full Stack Development"
+  },
+  {
+    "concept_id": 82,
+    "concept_name": "CI/CD Automation Pipelines",
+    "description": "GitHub Actions, automated testing, linting, and deploy workflows",
+    "topic_name": "Containers & CI/CD",
+    "skill_name": "DevOps & Cloud Infrastructure",
+    "target_id": 2,
+    "target_name": "Full Stack Development"
+  },
+  {
+    "concept_id": 83,
+    "concept_name": "Core Web Vitals",
+    "description": "LCP, FID/INP, CLS, and critical rendering path optimization",
+    "topic_name": "Web Performance & Monitoring",
+    "skill_name": "DevOps & Cloud Infrastructure",
+    "target_id": 2,
+    "target_name": "Full Stack Development"
+  },
+  {
+    "concept_id": 84,
+    "concept_name": "CDN and Asset Optimization",
+    "description": "Edge caching, gzip/brotli compression, and lazy loading",
+    "topic_name": "Web Performance & Monitoring",
+    "skill_name": "DevOps & Cloud Infrastructure",
+    "target_id": 2,
+    "target_name": "Full Stack Development"
+  },
+  {
+    "concept_id": 85,
+    "concept_name": "Application Monitoring & Logging",
+    "description": "Structured logging, OpenTelemetry, and APM tracing",
+    "topic_name": "Web Performance & Monitoring",
+    "skill_name": "DevOps & Cloud Infrastructure",
+    "target_id": 2,
+    "target_name": "Full Stack Development"
+  },
+  {
+    "concept_id": 86,
+    "concept_name": "OSI and TCP/IP Models",
+    "description": "7-layer abstraction, encapsulation, and packet headers",
+    "topic_name": "Network Fundamentals & TCP/IP",
+    "skill_name": "Network Security & Protocols",
+    "target_id": 3,
+    "target_name": "Cyber Security"
+  },
+  {
+    "concept_id": 87,
+    "concept_name": "TCP Handshake and Flags",
+    "description": "SYN, ACK, FIN, RST, sequence numbers, and state tracking",
+    "topic_name": "Network Fundamentals & TCP/IP",
+    "skill_name": "Network Security & Protocols",
+    "target_id": 3,
+    "target_name": "Cyber Security"
+  },
+  {
+    "concept_id": 88,
+    "concept_name": "IP Addressing and Subnetting",
+    "description": "CIDR notation, subnet masks, IPv4 vs IPv6, and routing",
+    "topic_name": "Network Fundamentals & TCP/IP",
+    "skill_name": "Network Security & Protocols",
+    "target_id": 3,
+    "target_name": "Cyber Security"
+  },
+  {
+    "concept_id": 89,
+    "concept_name": "DNS Architecture and Security",
+    "description": "Hierarchical resolution, DNSSEC, cache poisoning, and tunneling",
+    "topic_name": "Network Fundamentals & TCP/IP",
+    "skill_name": "Network Security & Protocols",
+    "target_id": 3,
+    "target_name": "Cyber Security"
+  },
+  {
+    "concept_id": 90,
+    "concept_name": "Packet Filtering & Stateful Firewalls",
+    "description": "Stateful inspection, SPI tables, and rule evaluation",
+    "topic_name": "Firewalls & Perimeter Defense",
+    "skill_name": "Network Security & Protocols",
+    "target_id": 3,
+    "target_name": "Cyber Security"
+  },
+  {
+    "concept_id": 91,
+    "concept_name": "Next-Gen Firewalls (NGFW)",
+    "description": "Deep packet inspection (DPI), application awareness, and IPS/IDS",
+    "topic_name": "Firewalls & Perimeter Defense",
+    "skill_name": "Network Security & Protocols",
+    "target_id": 3,
+    "target_name": "Cyber Security"
+  },
+  {
+    "concept_id": 92,
+    "concept_name": "Virtual Private Networks (VPN)",
+    "description": "IPsec, OpenVPN, WireGuard, tunnels, and split-tunneling",
+    "topic_name": "Firewalls & Perimeter Defense",
+    "skill_name": "Network Security & Protocols",
+    "target_id": 3,
+    "target_name": "Cyber Security"
+  },
+  {
+    "concept_id": 93,
+    "concept_name": "Demilitarized Zones (DMZ)",
+    "description": "Network segmentation, bastion hosts, and zero trust architecture",
+    "topic_name": "Firewalls & Perimeter Defense",
+    "skill_name": "Network Security & Protocols",
+    "target_id": 3,
+    "target_name": "Cyber Security"
+  },
+  {
+    "concept_id": 94,
+    "concept_name": "Wireless Security (WPA2/WPA3)",
+    "description": "Four-way handshake, SAE, KRACK attacks, and rogue APs",
+    "topic_name": "Wireless & Endpoint Security",
+    "skill_name": "Network Security & Protocols",
+    "target_id": 3,
+    "target_name": "Cyber Security"
+  },
+  {
+    "concept_id": 95,
+    "concept_name": "Endpoint Detection and Response (EDR)",
+    "description": "Behavioral telemetry, process injection detection, and isolation",
+    "topic_name": "Wireless & Endpoint Security",
+    "skill_name": "Network Security & Protocols",
+    "target_id": 3,
+    "target_name": "Cyber Security"
+  },
+  {
+    "concept_id": 96,
+    "concept_name": "Host Hardening & Patch Management",
+    "description": "Disabling unused services, CIS benchmarks, and vulnerability management",
+    "topic_name": "Wireless & Endpoint Security",
+    "skill_name": "Network Security & Protocols",
+    "target_id": 3,
+    "target_name": "Cyber Security"
+  },
+  {
+    "concept_id": 97,
+    "concept_name": "Symmetric Ciphers: AES",
+    "description": "Block ciphers, modes of operation: CBC, GCM, and nonce reuse",
+    "topic_name": "Symmetric & Asymmetric Encryption",
+    "skill_name": "Applied Cryptography & PKI",
+    "target_id": 3,
+    "target_name": "Cyber Security"
+  },
+  {
+    "concept_id": 98,
+    "concept_name": "Stream Ciphers and ChaCha20",
+    "description": "Keystream generators, initialization vectors, and poly1305",
+    "topic_name": "Symmetric & Asymmetric Encryption",
+    "skill_name": "Applied Cryptography & PKI",
+    "target_id": 3,
+    "target_name": "Cyber Security"
+  },
+  {
+    "concept_id": 99,
+    "concept_name": "Asymmetric Cryptography: RSA",
+    "description": "Prime factorization hardness, public/private key pairs, and padding (OAEP)",
+    "topic_name": "Symmetric & Asymmetric Encryption",
+    "skill_name": "Applied Cryptography & PKI",
+    "target_id": 3,
+    "target_name": "Cyber Security"
+  },
+  {
+    "concept_id": 100,
+    "concept_name": "Elliptic Curve Cryptography (ECC)",
+    "description": "Discrete logarithm on elliptic curves, ECDSA, and Ed25519 efficiency",
+    "topic_name": "Symmetric & Asymmetric Encryption",
+    "skill_name": "Applied Cryptography & PKI",
+    "target_id": 3,
+    "target_name": "Cyber Security"
+  },
+  {
+    "concept_id": 101,
+    "concept_name": "Cryptographic Hash Functions",
+    "description": "Pre-image resistance, collision resistance, SHA-256, and SHA-3",
+    "topic_name": "Hashing & Digital Signatures",
+    "skill_name": "Applied Cryptography & PKI",
+    "target_id": 3,
+    "target_name": "Cyber Security"
+  },
+  {
+    "concept_id": 102,
+    "concept_name": "HMAC & Message Integrity",
+    "description": "Keyed-hash message authentication codes and timing attack prevention",
+    "topic_name": "Hashing & Digital Signatures",
+    "skill_name": "Applied Cryptography & PKI",
+    "target_id": 3,
+    "target_name": "Cyber Security"
+  },
+  {
+    "concept_id": 103,
+    "concept_name": "Digital Signatures and Nonce",
+    "description": "Signing with private keys, verification with public keys, and non-repudiation",
+    "topic_name": "Hashing & Digital Signatures",
+    "skill_name": "Applied Cryptography & PKI",
+    "target_id": 3,
+    "target_name": "Cyber Security"
+  },
+  {
+    "concept_id": 104,
+    "concept_name": "Public Key Infrastructure (PKI)",
+    "description": "Certificate Authorities (CAs), root stores, and certificate revocation (CRL/OCSP)",
+    "topic_name": "TLS/SSL & Certificates",
+    "skill_name": "Applied Cryptography & PKI",
+    "target_id": 3,
+    "target_name": "Cyber Security"
+  },
+  {
+    "concept_id": 105,
+    "concept_name": "X.509 Certificates and CSR",
+    "description": "Distinguished names, SAN extensions, and key exchange proofs",
+    "topic_name": "TLS/SSL & Certificates",
+    "skill_name": "Applied Cryptography & PKI",
+    "target_id": 3,
+    "target_name": "Cyber Security"
+  },
+  {
+    "concept_id": 106,
+    "concept_name": "TLS 1.3 Handshake",
+    "description": "Zero round-trip resumption (0-RTT), forward secrecy, and cipher suites",
+    "topic_name": "TLS/SSL & Certificates",
+    "skill_name": "Applied Cryptography & PKI",
+    "target_id": 3,
+    "target_name": "Cyber Security"
+  },
+  {
+    "concept_id": 107,
+    "concept_name": "SQL Injection Mitigation",
+    "description": "Blind, union-based, and error-based injection prevention via prepared queries",
+    "topic_name": "OWASP Web Vulnerabilities",
+    "skill_name": "Application & System Security",
+    "target_id": 3,
+    "target_name": "Cyber Security"
+  },
+  {
+    "concept_id": 108,
+    "concept_name": "Cross-Site Scripting (XSS)",
+    "description": "Stored, reflected, DOM-based XSS, and Content Security Policy",
+    "topic_name": "OWASP Web Vulnerabilities",
+    "skill_name": "Application & System Security",
+    "target_id": 3,
+    "target_name": "Cyber Security"
+  },
+  {
+    "concept_id": 109,
+    "concept_name": "Cross-Site Request Forgery (CSRF)",
+    "description": "CSRF tokens, SameSite cookies, and custom headers",
+    "topic_name": "OWASP Web Vulnerabilities",
+    "skill_name": "Application & System Security",
+    "target_id": 3,
+    "target_name": "Cyber Security"
+  },
+  {
+    "concept_id": 110,
+    "concept_name": "Server-Side Request Forgery (SSRF)",
+    "description": "Metadata service exploitation, IP whitelisting, and internal network scans",
+    "topic_name": "OWASP Web Vulnerabilities",
+    "skill_name": "Application & System Security",
+    "target_id": 3,
+    "target_name": "Cyber Security"
+  },
+  {
+    "concept_id": 111,
+    "concept_name": "Insecure Deserialization",
+    "description": "Remote code execution via serialized objects and safe serialization formats",
+    "topic_name": "OWASP Web Vulnerabilities",
+    "skill_name": "Application & System Security",
+    "target_id": 3,
+    "target_name": "Cyber Security"
+  },
+  {
+    "concept_id": 112,
+    "concept_name": "Password Hashing: bcrypt and Argon2",
+    "description": "Salting, work factors, memory hardness, and credential stuffing",
+    "topic_name": "Authentication Attacks & Hardening",
+    "skill_name": "Application & System Security",
+    "target_id": 3,
+    "target_name": "Cyber Security"
+  },
+  {
+    "concept_id": 113,
+    "concept_name": "Multi-Factor Authentication (MFA)",
+    "description": "TOTP algorithms (RFC 6238), FIDO2 WebAuthn, and push phishing",
+    "topic_name": "Authentication Attacks & Hardening",
+    "skill_name": "Application & System Security",
+    "target_id": 3,
+    "target_name": "Cyber Security"
+  },
+  {
+    "concept_id": 114,
+    "concept_name": "Session Hijacking & Fixation",
+    "description": "Cookie flags, session regeneration, and token invalidation",
+    "topic_name": "Authentication Attacks & Hardening",
+    "skill_name": "Application & System Security",
+    "target_id": 3,
+    "target_name": "Cyber Security"
+  },
+  {
+    "concept_id": 115,
+    "concept_name": "Access Control: DAC and MAC",
+    "description": "File permissions, SELinux, AppArmor, and role-based access control",
+    "topic_name": "Operating System Security",
+    "skill_name": "Application & System Security",
+    "target_id": 3,
+    "target_name": "Cyber Security"
+  },
+  {
+    "concept_id": 116,
+    "concept_name": "Privilege Escalation Techniques",
+    "description": "SUID binaries, sudo misconfigurations, kernel exploits, and PATH manipulation",
+    "topic_name": "Operating System Security",
+    "skill_name": "Application & System Security",
+    "target_id": 3,
+    "target_name": "Cyber Security"
+  },
+  {
+    "concept_id": 117,
+    "concept_name": "Memory Corruption & Buffer Overflows",
+    "description": "Stack smashing, shellcode, ASLR, DEP/NX, and stack canaries",
+    "topic_name": "Operating System Security",
+    "skill_name": "Application & System Security",
+    "target_id": 3,
+    "target_name": "Cyber Security"
+  },
+  {
+    "concept_id": 118,
+    "concept_name": "SIEM Log Aggregation",
+    "description": "Syslog, Windows Event Logs, normalization, and correlation rules",
+    "topic_name": "SIEM & Threat Detection",
+    "skill_name": "Security Operations & Incident Response",
+    "target_id": 3,
+    "target_name": "Cyber Security"
+  },
+  {
+    "concept_id": 119,
+    "concept_name": "Intrusion Detection Systems (Snort/Suricata)",
+    "description": "Signature matching, protocol decoding, and PCAP analysis",
+    "topic_name": "SIEM & Threat Detection",
+    "skill_name": "Security Operations & Incident Response",
+    "target_id": 3,
+    "target_name": "Cyber Security"
+  },
+  {
+    "concept_id": 120,
+    "concept_name": "MITRE ATT&CK Framework",
+    "description": "Tactics, techniques, procedures (TTPs), and adversary emulation",
+    "topic_name": "SIEM & Threat Detection",
+    "skill_name": "Security Operations & Incident Response",
+    "target_id": 3,
+    "target_name": "Cyber Security"
+  },
+  {
+    "concept_id": 121,
+    "concept_name": "Incident Response Lifecycle (NIST)",
+    "description": "Preparation, detection, containment, eradication, recovery, lessons learned",
+    "topic_name": "Forensics & Incident Lifecycle",
+    "skill_name": "Security Operations & Incident Response",
+    "target_id": 3,
+    "target_name": "Cyber Security"
+  },
+  {
+    "concept_id": 122,
+    "concept_name": "Memory and Disk Forensics",
+    "description": "Volatiles capture, timeline analysis, Autopsy, and Volatility toolkits",
+    "topic_name": "Forensics & Incident Lifecycle",
+    "skill_name": "Security Operations & Incident Response",
+    "target_id": 3,
+    "target_name": "Cyber Security"
+  },
+  {
+    "concept_id": 123,
+    "concept_name": "Malware Analysis Fundamentals",
+    "description": "Static analysis, PE headers, dynamic sandbox execution, and YARA rules",
+    "topic_name": "Forensics & Incident Lifecycle",
+    "skill_name": "Security Operations & Incident Response",
+    "target_id": 3,
+    "target_name": "Cyber Security"
+  },
+  {
+    "concept_id": 124,
+    "concept_name": "Self-Attention Foundations",
+    "description": "Scaled dot-product attention, query-key-value projections",
+    "topic_name": "Transformer Mechanics & Attention",
+    "skill_name": "Foundation Models & Architectures",
+    "target_id": 4,
+    "target_name": "Generative AI"
+  },
+  {
+    "concept_id": 125,
+    "concept_name": "Multi-Query and Grouped-Query Attention",
+    "description": "MQA, GQA, reducing KV-cache memory during inference",
+    "topic_name": "Transformer Mechanics & Attention",
+    "skill_name": "Foundation Models & Architectures",
+    "target_id": 4,
+    "target_name": "Generative AI"
+  },
+  {
+    "concept_id": 126,
+    "concept_name": "FlashAttention & Memory Optimization",
+    "description": "IO-aware exact attention tiling, SRAM usage, and GPU speedup",
+    "topic_name": "Transformer Mechanics & Attention",
+    "skill_name": "Foundation Models & Architectures",
+    "target_id": 4,
+    "target_name": "Generative AI"
+  },
+  {
+    "concept_id": 127,
+    "concept_name": "Rotary Positional Embeddings (RoPE)",
+    "description": "Relative position encodings via 2D rotation matrices in complex space",
+    "topic_name": "Transformer Mechanics & Attention",
+    "skill_name": "Foundation Models & Architectures",
+    "target_id": 4,
+    "target_name": "Generative AI"
+  },
+  {
+    "concept_id": 128,
+    "concept_name": "Autoregressive Generation & Causal Masking",
+    "description": "Next-token prediction, triangular causal masks, and generation loops",
+    "topic_name": "Autoregressive LLMs & Sampling",
+    "skill_name": "Foundation Models & Architectures",
+    "target_id": 4,
+    "target_name": "Generative AI"
+  },
+  {
+    "concept_id": 129,
+    "concept_name": "Temperature and Top-P (Nucleus) Sampling",
+    "description": "Probability flattening, cumulative probability cutoff, and top-k filtering",
+    "topic_name": "Autoregressive LLMs & Sampling",
+    "skill_name": "Foundation Models & Architectures",
+    "target_id": 4,
+    "target_name": "Generative AI"
+  },
+  {
+    "concept_id": 130,
+    "concept_name": "Repetition Penalties & Frequency Penalties",
+    "description": "Penalizing repeated tokens in logit distributions to reduce loops",
+    "topic_name": "Autoregressive LLMs & Sampling",
+    "skill_name": "Foundation Models & Architectures",
+    "target_id": 4,
+    "target_name": "Generative AI"
+  },
+  {
+    "concept_id": 131,
+    "concept_name": "KV Caching in Inference",
+    "description": "Caching key and value tensors across autoregressive decoding steps",
+    "topic_name": "Autoregressive LLMs & Sampling",
+    "skill_name": "Foundation Models & Architectures",
+    "target_id": 4,
+    "target_name": "Generative AI"
+  },
+  {
+    "concept_id": 132,
+    "concept_name": "Byte-Pair Encoding (BPE)",
+    "description": "Subword tokenization, vocabulary merging, byte fallbacks, and SentencePiece",
+    "topic_name": "Tokenization & Embeddings",
+    "skill_name": "Foundation Models & Architectures",
+    "target_id": 4,
+    "target_name": "Generative AI"
+  },
+  {
+    "concept_id": 133,
+    "concept_name": "WordPiece and Unigram Tokenization",
+    "description": "Likelihood-based subword segmentations (BERT and T5)",
+    "topic_name": "Tokenization & Embeddings",
+    "skill_name": "Foundation Models & Architectures",
+    "target_id": 4,
+    "target_name": "Generative AI"
+  },
+  {
+    "concept_id": 134,
+    "concept_name": "Dense Text Embeddings",
+    "description": "Mapping sentences to semantic vector spaces via contrastive learning",
+    "topic_name": "Tokenization & Embeddings",
+    "skill_name": "Foundation Models & Architectures",
+    "target_id": 4,
+    "target_name": "Generative AI"
+  },
+  {
+    "concept_id": 135,
+    "concept_name": "Embedding Dimensionality & Normalization",
+    "description": "Cosine similarity, L2 unit sphere normalization, and MRL",
+    "topic_name": "Tokenization & Embeddings",
+    "skill_name": "Foundation Models & Architectures",
+    "target_id": 4,
+    "target_name": "Generative AI"
+  },
+  {
+    "concept_id": 136,
+    "concept_name": "Zero-Shot and Few-Shot Prompting",
+    "description": "Providing exemplars in context to guide style and reasoning format",
+    "topic_name": "Prompt Design & In-Context Learning",
+    "skill_name": "Prompt Engineering & Reasoning",
+    "target_id": 4,
+    "target_name": "Generative AI"
+  },
+  {
+    "concept_id": 137,
+    "concept_name": "System Instructions & Persona Framing",
+    "description": "Steering model behavior, tone, and constraints via system role prompts",
+    "topic_name": "Prompt Design & In-Context Learning",
+    "skill_name": "Prompt Engineering & Reasoning",
+    "target_id": 4,
+    "target_name": "Generative AI"
+  },
+  {
+    "concept_id": 138,
+    "concept_name": "Structured Output Generation",
+    "description": "Enforcing JSON schemas, regex constraints, and Pydantic outputs with grammar samplers",
+    "topic_name": "Prompt Design & In-Context Learning",
+    "skill_name": "Prompt Engineering & Reasoning",
+    "target_id": 4,
+    "target_name": "Generative AI"
+  },
+  {
+    "concept_id": 139,
+    "concept_name": "Context Window Limits & Lost-in-the-Middle",
+    "description": "Attention degradation at center of long context windows",
+    "topic_name": "Prompt Design & In-Context Learning",
+    "skill_name": "Prompt Engineering & Reasoning",
+    "target_id": 4,
+    "target_name": "Generative AI"
+  },
+  {
+    "concept_id": 140,
+    "concept_name": "Chain-of-Thought (CoT) Prompting",
+    "description": "Step-by-step reasoning elicitation, zero-shot 'Let's think step by step'",
+    "topic_name": "Advanced Reasoning: CoT & Tree-of-Thought",
+    "skill_name": "Prompt Engineering & Reasoning",
+    "target_id": 4,
+    "target_name": "Generative AI"
+  },
+  {
+    "concept_id": 141,
+    "concept_name": "Self-Consistency Sampling",
+    "description": "Generating multiple reasoning paths and taking majority vote answer",
+    "topic_name": "Advanced Reasoning: CoT & Tree-of-Thought",
+    "skill_name": "Prompt Engineering & Reasoning",
+    "target_id": 4,
+    "target_name": "Generative AI"
+  },
+  {
+    "concept_id": 142,
+    "concept_name": "Tree of Thoughts (ToT) & Graph of Thoughts",
+    "description": "Branching deliberate search, state evaluation, backtracking (BFS/DFS)",
+    "topic_name": "Advanced Reasoning: CoT & Tree-of-Thought",
+    "skill_name": "Prompt Engineering & Reasoning",
+    "target_id": 4,
+    "target_name": "Generative AI"
+  },
+  {
+    "concept_id": 143,
+    "concept_name": "ReAct: Reasoning and Acting",
+    "description": "Interleaving thought, tool action, and observation steps in autonomous loops",
+    "topic_name": "Advanced Reasoning: CoT & Tree-of-Thought",
+    "skill_name": "Prompt Engineering & Reasoning",
+    "target_id": 4,
+    "target_name": "Generative AI"
+  },
+  {
+    "concept_id": 144,
+    "concept_name": "Text Splitting Strategies",
+    "description": "Fixed-size, recursive character, semantic chunking, and token-based boundaries",
+    "topic_name": "Document Ingestion & Chunking",
+    "skill_name": "Retrieval-Augmented Generation (RAG)",
+    "target_id": 4,
+    "target_name": "Generative AI"
+  },
+  {
+    "concept_id": 145,
+    "concept_name": "Chunk Overlap and Context Preservation",
+    "description": "Sliding window overlaps to prevent boundary-spanning concept loss",
+    "topic_name": "Document Ingestion & Chunking",
+    "skill_name": "Retrieval-Augmented Generation (RAG)",
+    "target_id": 4,
+    "target_name": "Generative AI"
+  },
+  {
+    "concept_id": 146,
+    "concept_name": "Document Metadata Enrichment",
+    "description": "Tagging chunks with source URI, chapter headings, and timestamps",
+    "topic_name": "Document Ingestion & Chunking",
+    "skill_name": "Retrieval-Augmented Generation (RAG)",
+    "target_id": 4,
+    "target_name": "Generative AI"
+  },
+  {
+    "concept_id": 147,
+    "concept_name": "Vector Indexing: HNSW and IVF",
+    "description": "Hierarchical Navigable Small World graphs, inverted file index, and speed-recall tradeoffs",
+    "topic_name": "Vector Databases & Similarity Search",
+    "skill_name": "Retrieval-Augmented Generation (RAG)",
+    "target_id": 4,
+    "target_name": "Generative AI"
+  },
+  {
+    "concept_id": 148,
+    "concept_name": "Distance Metrics: Cosine vs Dot Product",
+    "description": "Cosine distance, Euclidean L2 distance, and inner product equivalences",
+    "topic_name": "Vector Databases & Similarity Search",
+    "skill_name": "Retrieval-Augmented Generation (RAG)",
+    "target_id": 4,
+    "target_name": "Generative AI"
+  },
+  {
+    "concept_id": 149,
+    "concept_name": "Metadata Filtering & Hybrid Search",
+    "description": "Combining sparse keyword inverted indexes (BM25) with dense vector search",
+    "topic_name": "Vector Databases & Similarity Search",
+    "skill_name": "Retrieval-Augmented Generation (RAG)",
+    "target_id": 4,
+    "target_name": "Generative AI"
+  },
+  {
+    "concept_id": 150,
+    "concept_name": "Cross-Encoder Re-ranking",
+    "description": "Re-scoring top-k candidate chunks with joint query-document attention",
+    "topic_name": "RAG Retrieval & Re-ranking",
+    "skill_name": "Retrieval-Augmented Generation (RAG)",
+    "target_id": 4,
+    "target_name": "Generative AI"
+  },
+  {
+    "concept_id": 151,
+    "concept_name": "Query Expansion & HyDE",
+    "description": "Hypothetical Document Embeddings, generating pseudo-answers to expand queries",
+    "topic_name": "RAG Retrieval & Re-ranking",
+    "skill_name": "Retrieval-Augmented Generation (RAG)",
+    "target_id": 4,
+    "target_name": "Generative AI"
+  },
+  {
+    "concept_id": 152,
+    "concept_name": "Context Compression & Summarization",
+    "description": "Extracting relevant sentences before prompt assembly to reduce noise",
+    "topic_name": "RAG Retrieval & Re-ranking",
+    "skill_name": "Retrieval-Augmented Generation (RAG)",
+    "target_id": 4,
+    "target_name": "Generative AI"
+  },
+  {
+    "concept_id": 153,
+    "concept_name": "RAG Evaluation: RAGAS Framework",
+    "description": "Faithfulness, answer relevance, context recall, and context precision",
+    "topic_name": "RAG Retrieval & Re-ranking",
+    "skill_name": "Retrieval-Augmented Generation (RAG)",
+    "target_id": 4,
+    "target_name": "Generative AI"
+  },
+  {
+    "concept_id": 154,
+    "concept_name": "LoRA: Low-Rank Adaptation",
+    "description": "Decomposing weight updates into low-rank matrices W = W0 + B*A",
+    "topic_name": "Parameter-Efficient Fine-Tuning (PEFT)",
+    "skill_name": "Fine-Tuning, Alignment & Safety",
+    "target_id": 4,
+    "target_name": "Generative AI"
+  },
+  {
+    "concept_id": 155,
+    "concept_name": "QLoRA & 4-bit NormalFloat Quantization",
+    "description": "NF4 data type, double quantization, paged optimizers for consumer GPUs",
+    "topic_name": "Parameter-Efficient Fine-Tuning (PEFT)",
+    "skill_name": "Fine-Tuning, Alignment & Safety",
+    "target_id": 4,
+    "target_name": "Generative AI"
+  },
+  {
+    "concept_id": 156,
+    "concept_name": "Prefix Tuning and Prompt Tuning",
+    "description": "Prepending trainable continuous virtual tokens to key/value activations",
+    "topic_name": "Parameter-Efficient Fine-Tuning (PEFT)",
+    "skill_name": "Fine-Tuning, Alignment & Safety",
+    "target_id": 4,
+    "target_name": "Generative AI"
+  },
+  {
+    "concept_id": 157,
+    "concept_name": "Supervised Fine-Tuning (SFT)",
+    "description": "Training base models on curated prompt-response pairs for instruction following",
+    "topic_name": "RLHF & Model Alignment",
+    "skill_name": "Fine-Tuning, Alignment & Safety",
+    "target_id": 4,
+    "target_name": "Generative AI"
+  },
+  {
+    "concept_id": 158,
+    "concept_name": "Reward Modeling (RM)",
+    "description": "Pairwise Bradley-Terry preference loss trained on human comparison choices",
+    "topic_name": "RLHF & Model Alignment",
+    "skill_name": "Fine-Tuning, Alignment & Safety",
+    "target_id": 4,
+    "target_name": "Generative AI"
+  },
+  {
+    "concept_id": 159,
+    "concept_name": "PPO in RLHF",
+    "description": "Proximal Policy Optimization with KL-divergence penalty against base model",
+    "topic_name": "RLHF & Model Alignment",
+    "skill_name": "Fine-Tuning, Alignment & Safety",
+    "target_id": 4,
+    "target_name": "Generative AI"
+  },
+  {
+    "concept_id": 160,
+    "concept_name": "Direct Preference Optimization (DPO)",
+    "description": "Implicitly optimizing the reward function directly on preference pairs without RL loop",
+    "topic_name": "RLHF & Model Alignment",
+    "skill_name": "Fine-Tuning, Alignment & Safety",
+    "target_id": 4,
+    "target_name": "Generative AI"
+  },
+  {
+    "concept_id": 161,
+    "concept_name": "LLM-as-a-Judge Evaluation",
+    "description": "Using frontier models to grade outputs against rubric rubrics with position debiasing",
+    "topic_name": "LLM Evaluation, Red Teaming & Guardrails",
+    "skill_name": "Fine-Tuning, Alignment & Safety",
+    "target_id": 4,
+    "target_name": "Generative AI"
+  },
+  {
+    "concept_id": 162,
+    "concept_name": "Prompt Injection and Jailbreaking",
+    "description": "Direct/indirect prompt injection, ASCII art bypasses, and delimiters",
+    "topic_name": "LLM Evaluation, Red Teaming & Guardrails",
+    "skill_name": "Fine-Tuning, Alignment & Safety",
+    "target_id": 4,
+    "target_name": "Generative AI"
+  },
+  {
+    "concept_id": 163,
+    "concept_name": "Safety Guardrails & Content Moderation",
+    "description": "Llama Guard, NeMo Guardrails, regex filters, and PII masking",
+    "topic_name": "LLM Evaluation, Red Teaming & Guardrails",
+    "skill_name": "Fine-Tuning, Alignment & Safety",
+    "target_id": 4,
+    "target_name": "Generative AI"
+  },
+  {
+    "concept_id": 164,
+    "concept_name": "Preamble & Constitutional Features",
+    "description": "Philosophy, Sovereign, Socialist, Secular, Democratic, Republic, Basic Structure doctrine",
+    "topic_name": "Constitutional Framework",
+    "skill_name": "Indian Polity & Governance",
+    "target_id": 5,
+    "target_name": "UPSC Civil Services"
+  },
+  {
+    "concept_id": 165,
+    "concept_name": "Making of the Constitution & Constituent Assembly",
+    "description": "Drafting committee, timeline, Government of India Acts 1919 and 1935 sources",
+    "topic_name": "Constitutional Framework",
+    "skill_name": "Indian Polity & Governance",
+    "target_id": 5,
+    "target_name": "UPSC Civil Services"
+  },
+  {
+    "concept_id": 166,
+    "concept_name": "Union and Its Territory",
+    "description": "Articles 1 to 4, reorganization of states, Dhar Commission, Fazl Ali Commission",
+    "topic_name": "Constitutional Framework",
+    "skill_name": "Indian Polity & Governance",
+    "target_id": 5,
+    "target_name": "UPSC Civil Services"
+  },
+  {
+    "concept_id": 167,
+    "concept_name": "Citizenship Provisions",
+    "description": "Articles 5 to 11, Citizenship Act 1955, modes of acquisition and loss of citizenship",
+    "topic_name": "Constitutional Framework",
+    "skill_name": "Indian Polity & Governance",
+    "target_id": 5,
+    "target_name": "UPSC Civil Services"
+  },
+  {
+    "concept_id": 168,
+    "concept_name": "Fundamental Rights (Part III)",
+    "description": "Articles 12-35, Right to Equality, Freedom, Exploitation, Religion, Culture & Education",
+    "topic_name": "Fundamental Rights & DPSP",
+    "skill_name": "Indian Polity & Governance",
+    "target_id": 5,
+    "target_name": "UPSC Civil Services"
+  },
+  {
+    "concept_id": 169,
+    "concept_name": "Writs & Constitutional Remedies (Article 32)",
+    "description": "Habeas Corpus, Mandamus, Prohibition, Certiorari, Quo-Warranto",
+    "topic_name": "Fundamental Rights & DPSP",
+    "skill_name": "Indian Polity & Governance",
+    "target_id": 5,
+    "target_name": "UPSC Civil Services"
+  },
+  {
+    "concept_id": 170,
+    "concept_name": "Directive Principles of State Policy (Part IV)",
+    "description": "Socialistic, Gandhian, Liberal-intellectual principles, non-justiciability",
+    "topic_name": "Fundamental Rights & DPSP",
+    "skill_name": "Indian Polity & Governance",
+    "target_id": 5,
+    "target_name": "UPSC Civil Services"
+  },
+  {
+    "concept_id": 171,
+    "concept_name": "Fundamental Duties (Part IV-A)",
+    "description": "Article 51A, 42nd Amendment, Swaran Singh Committee recommendations",
+    "topic_name": "Fundamental Rights & DPSP",
+    "skill_name": "Indian Polity & Governance",
+    "target_id": 5,
+    "target_name": "UPSC Civil Services"
+  },
+  {
+    "concept_id": 172,
+    "concept_name": "President & Vice-President",
+    "description": "Election, impeachment, pardoning powers (Article 72), ordinance power (Article 123)",
+    "topic_name": "Union Executive & Parliament",
+    "skill_name": "Indian Polity & Governance",
+    "target_id": 5,
+    "target_name": "UPSC Civil Services"
+  },
+  {
+    "concept_id": 173,
+    "concept_name": "Prime Minister & Council of Ministers",
+    "description": "Collective responsibility (Article 75), Cabinet committees, individual responsibility",
+    "topic_name": "Union Executive & Parliament",
+    "skill_name": "Indian Polity & Governance",
+    "target_id": 5,
+    "target_name": "UPSC Civil Services"
+  },
+  {
+    "concept_id": 174,
+    "concept_name": "Parliament: Rajya Sabha & Lok Sabha",
+    "description": "Composition, powers, legislative procedure, ordinary and money bills",
+    "topic_name": "Union Executive & Parliament",
+    "skill_name": "Indian Polity & Governance",
+    "target_id": 5,
+    "target_name": "UPSC Civil Services"
+  },
+  {
+    "concept_id": 175,
+    "concept_name": "Parliamentary Committees & Budgetary Process",
+    "description": "Public Accounts Committee, Estimates Committee, stages of Budget passage",
+    "topic_name": "Union Executive & Parliament",
+    "skill_name": "Indian Polity & Governance",
+    "target_id": 5,
+    "target_name": "UPSC Civil Services"
+  },
+  {
+    "concept_id": 176,
+    "concept_name": "Supreme Court of India",
+    "description": "Original, appellate, advisory jurisdiction (Article 143), judicial review, Collegium system",
+    "topic_name": "Judiciary & Constitutional Bodies",
+    "skill_name": "Indian Polity & Governance",
+    "target_id": 5,
+    "target_name": "UPSC Civil Services"
+  },
+  {
+    "concept_id": 177,
+    "concept_name": "High Courts & Subordinate Judiciary",
+    "description": "Article 226 writ jurisdiction vs Article 32, judicial independence",
+    "topic_name": "Judiciary & Constitutional Bodies",
+    "skill_name": "Indian Polity & Governance",
+    "target_id": 5,
+    "target_name": "UPSC Civil Services"
+  },
+  {
+    "concept_id": 178,
+    "concept_name": "Election Commission & Finance Commission",
+    "description": "Article 324, Article 280, mandates, independence, and recommendations",
+    "topic_name": "Judiciary & Constitutional Bodies",
+    "skill_name": "Indian Polity & Governance",
+    "target_id": 5,
+    "target_name": "UPSC Civil Services"
+  },
+  {
+    "concept_id": 179,
+    "concept_name": "Comptroller & Auditor General (CAG)",
+    "description": "Article 148, duties, guardian of the public purse, audit reports",
+    "topic_name": "Judiciary & Constitutional Bodies",
+    "skill_name": "Indian Polity & Governance",
+    "target_id": 5,
+    "target_name": "UPSC Civil Services"
+  },
+  {
+    "concept_id": 180,
+    "concept_name": "Indus Valley Civilization",
+    "description": "Urban planning, granaries, seals, script, Harappa, Mohenjodaro, Lothal",
+    "topic_name": "Ancient & Medieval India",
+    "skill_name": "History & Indian National Movement",
+    "target_id": 5,
+    "target_name": "UPSC Civil Services"
+  },
+  {
+    "concept_id": 181,
+    "concept_name": "Vedic Period & Religious Movements",
+    "description": "Rig Vedic vs Later Vedic society, Buddhism, Jainism, philosophical schools",
+    "topic_name": "Ancient & Medieval India",
+    "skill_name": "History & Indian National Movement",
+    "target_id": 5,
+    "target_name": "UPSC Civil Services"
+  },
+  {
+    "concept_id": 182,
+    "concept_name": "Mauryan & Gupta Empires",
+    "description": "Ashokan edicts, administrative machinery, golden age art, literature, and science",
+    "topic_name": "Ancient & Medieval India",
+    "skill_name": "History & Indian National Movement",
+    "target_id": 5,
+    "target_name": "UPSC Civil Services"
+  },
+  {
+    "concept_id": 183,
+    "concept_name": "Delhi Sultanate & Mughal Administration",
+    "description": "Mansabdari system, agrarian reforms, revenue systems (Zabt), religious policies",
+    "topic_name": "Ancient & Medieval India",
+    "skill_name": "History & Indian National Movement",
+    "target_id": 5,
+    "target_name": "UPSC Civil Services"
+  },
+  {
+    "concept_id": 184,
+    "concept_name": "Colonial Expansion: Subsidiary Alliance & Doctrine of Lapse",
+    "description": "Wellesley, Dalhousie, annexation of Awadh, princely states policies",
+    "topic_name": "British Rule & Economic Policies",
+    "skill_name": "History & Indian National Movement",
+    "target_id": 5,
+    "target_name": "UPSC Civil Services"
+  },
+  {
+    "concept_id": 185,
+    "concept_name": "Colonial Land Revenue Settlements",
+    "description": "Permanent Settlement (Zamindari), Ryotwari, Mahalwari systems and impact on peasantry",
+    "topic_name": "British Rule & Economic Policies",
+    "skill_name": "History & Indian National Movement",
+    "target_id": 5,
+    "target_name": "UPSC Civil Services"
+  },
+  {
+    "concept_id": 186,
+    "concept_name": "Drain of Wealth & Deindustrialization",
+    "description": "Dadabhai Naoroji, decline of traditional handicrafts, commercialization of agriculture",
+    "topic_name": "British Rule & Economic Policies",
+    "skill_name": "History & Indian National Movement",
+    "target_id": 5,
+    "target_name": "UPSC Civil Services"
+  },
+  {
+    "concept_id": 187,
+    "concept_name": "Revolt of 1857 & Aftermath",
+    "description": "Causes, leaders, Government of India Act 1858, Queen's Proclamation",
+    "topic_name": "Freedom Struggle & National Movement",
+    "skill_name": "History & Indian National Movement",
+    "target_id": 5,
+    "target_name": "UPSC Civil Services"
+  },
+  {
+    "concept_id": 188,
+    "concept_name": "Moderate and Extremist Phases (1885-1915)",
+    "description": "Surat split 1907, partition of Bengal 1905, Swadeshi movement, Home Rule leagues",
+    "topic_name": "Freedom Struggle & National Movement",
+    "skill_name": "History & Indian National Movement",
+    "target_id": 5,
+    "target_name": "UPSC Civil Services"
+  },
+  {
+    "concept_id": 189,
+    "concept_name": "Gandhian Movements (1915-1942)",
+    "description": "Non-Cooperation (1920), Civil Disobedience (1930), Quit India Movement (1942)",
+    "topic_name": "Freedom Struggle & National Movement",
+    "skill_name": "History & Indian National Movement",
+    "target_id": 5,
+    "target_name": "UPSC Civil Services"
+  },
+  {
+    "concept_id": 190,
+    "concept_name": "Constitutional Developments & Partition",
+    "description": "Simon Commission, Poona Pact, Cripps Mission, Cabinet Mission 1946, Indian Independence Act",
+    "topic_name": "Freedom Struggle & National Movement",
+    "skill_name": "History & Indian National Movement",
+    "target_id": 5,
+    "target_name": "UPSC Civil Services"
+  },
+  {
+    "concept_id": 191,
+    "concept_name": "Geomorphology & Plate Tectonics",
+    "description": "Interior of the Earth, continental drift, plate boundaries, earthquakes, volcanism",
+    "topic_name": "Physical & Indian Geography",
+    "skill_name": "Geography, Ecology & Environment",
+    "target_id": 5,
+    "target_name": "UPSC Civil Services"
+  },
+  {
+    "concept_id": 192,
+    "concept_name": "Atmospheric Circulation & Monsoons",
+    "description": "Pressure belts, Coriolis force, ITCZ, Jet Streams, Indian Monsoon mechanisms",
+    "topic_name": "Physical & Indian Geography",
+    "skill_name": "Geography, Ecology & Environment",
+    "target_id": 5,
+    "target_name": "UPSC Civil Services"
+  },
+  {
+    "concept_id": 193,
+    "concept_name": "Drainage Systems of India",
+    "description": "Himalayan rivers (Indus, Ganga, Brahmaputra) vs Peninsular rivers, river regimes",
+    "topic_name": "Physical & Indian Geography",
+    "skill_name": "Geography, Ecology & Environment",
+    "target_id": 5,
+    "target_name": "UPSC Civil Services"
+  },
+  {
+    "concept_id": 194,
+    "concept_name": "Ecosystem Ecology & Biomes",
+    "description": "Food chains, trophic levels, ecological succession, bioaccumulation, biomagnification",
+    "topic_name": "Ecology, Biodiversity & Conservation",
+    "skill_name": "Geography, Ecology & Environment",
+    "target_id": 5,
+    "target_name": "UPSC Civil Services"
+  },
+  {
+    "concept_id": 195,
+    "concept_name": "Biodiversity Hotspots & Protected Areas",
+    "description": "Western Ghats, Indo-Burma, National Parks, Wildlife Sanctuaries, Biosphere Reserves",
+    "topic_name": "Ecology, Biodiversity & Conservation",
+    "skill_name": "Geography, Ecology & Environment",
+    "target_id": 5,
+    "target_name": "UPSC Civil Services"
+  },
+  {
+    "concept_id": 196,
+    "concept_name": "Wildlife Protection Act 1972",
+    "description": "Schedules, protected animal statuses, Project Tiger, CITES, IUCN Red List",
+    "topic_name": "Ecology, Biodiversity & Conservation",
+    "skill_name": "Geography, Ecology & Environment",
+    "target_id": 5,
+    "target_name": "UPSC Civil Services"
+  },
+  {
+    "concept_id": 197,
+    "concept_name": "UNFCCC, Kyoto Protocol & Paris Agreement",
+    "description": "NDCs, Common But Differentiated Responsibilities (CBDR), carbon credits",
+    "topic_name": "Climate Change & Conventions",
+    "skill_name": "Geography, Ecology & Environment",
+    "target_id": 5,
+    "target_name": "UPSC Civil Services"
+  },
+  {
+    "concept_id": 198,
+    "concept_name": "Biodiversity Conventions (CBD, Ramsar, CMS)",
+    "description": "Nagoya Protocol on ABS, Ramsar wetlands, Montreal Protocol for Ozone",
+    "topic_name": "Climate Change & Conventions",
+    "skill_name": "Geography, Ecology & Environment",
+    "target_id": 5,
+    "target_name": "UPSC Civil Services"
+  },
+  {
+    "concept_id": 199,
+    "concept_name": "National Income Accounting",
+    "description": "GDP, GNP, NNP, GVA at basic prices, nominal vs real GDP, GDP deflator",
+    "topic_name": "Macroeconomic Fundamentals",
+    "skill_name": "Indian Economy & Development",
+    "target_id": 5,
+    "target_name": "UPSC Civil Services"
+  },
+  {
+    "concept_id": 200,
+    "concept_name": "Inflation Metrics & Indices",
+    "description": "CPI, WPI, headline vs core inflation, demand-pull and cost-push factors",
+    "topic_name": "Macroeconomic Fundamentals",
+    "skill_name": "Indian Economy & Development",
+    "target_id": 5,
+    "target_name": "UPSC Civil Services"
+  },
+  {
+    "concept_id": 201,
+    "concept_name": "Reserve Bank of India & Monetary Policy Framework",
+    "description": "MPC, repo rate, reverse repo, CRR, SLR, Open Market Operations (OMO)",
+    "topic_name": "Banking & Monetary Policy",
+    "skill_name": "Indian Economy & Development",
+    "target_id": 5,
+    "target_name": "UPSC Civil Services"
+  },
+  {
+    "concept_id": 202,
+    "concept_name": "Commercial Banking, NPAs & Insolvency (IBC)",
+    "description": "Gross and net NPAs, PCA framework, SARFAESI, Insolvency and Bankruptcy Code",
+    "topic_name": "Banking & Monetary Policy",
+    "skill_name": "Indian Economy & Development",
+    "target_id": 5,
+    "target_name": "UPSC Civil Services"
+  },
+  {
+    "concept_id": 203,
+    "concept_name": "Fiscal Deficit & FRBM Act",
+    "description": "Revenue deficit, fiscal deficit, primary deficit, debt-to-GDP ratio targets",
+    "topic_name": "Fiscal Policy & Public Finance",
+    "skill_name": "Indian Economy & Development",
+    "target_id": 5,
+    "target_name": "UPSC Civil Services"
+  },
+  {
+    "concept_id": 204,
+    "concept_name": "Taxation Structure & GST",
+    "description": "Direct vs indirect taxes, GST Council (Article 279A), cess, surcharges, tax devolution",
+    "topic_name": "Fiscal Policy & Public Finance",
+    "skill_name": "Indian Economy & Development",
+    "target_id": 5,
+    "target_name": "UPSC Civil Services"
+  },
+  {
+    "concept_id": 205,
+    "concept_name": "Divisibility & Remainder Theorems",
+    "description": "Divisibility rules (7, 11, 13), cyclicity of unit digits, and Wilson's theorem",
+    "topic_name": "Arithmetic & Number Systems",
+    "skill_name": "Quantitative Aptitude",
+    "target_id": 6,
+    "target_name": "SSC CGL"
+  },
+  {
+    "concept_id": 206,
+    "concept_name": "HCF and LCM Applications",
+    "description": "Successive division, fractions LCM/HCF, and coprime number properties",
+    "topic_name": "Arithmetic & Number Systems",
+    "skill_name": "Quantitative Aptitude",
+    "target_id": 6,
+    "target_name": "SSC CGL"
+  },
+  {
+    "concept_id": 207,
+    "concept_name": "Time and Work Fundamentals",
+    "description": "Unitary method, efficiency ratios, negative work (pipes & cisterns)",
+    "topic_name": "Arithmetic & Number Systems",
+    "skill_name": "Quantitative Aptitude",
+    "target_id": 6,
+    "target_name": "SSC CGL"
+  },
+  {
+    "concept_id": 208,
+    "concept_name": "Time, Speed & Distance",
+    "description": "Relative speed, trains passing platforms/poles, and boats & streams",
+    "topic_name": "Arithmetic & Number Systems",
+    "skill_name": "Quantitative Aptitude",
+    "target_id": 6,
+    "target_name": "SSC CGL"
+  },
+  {
+    "concept_id": 209,
+    "concept_name": "Percentages and Successive Change",
+    "description": "Fraction-to-percentage conversions, net percentage change formula: a + b + ab/100",
+    "topic_name": "Percentage & Commercial Math",
+    "skill_name": "Quantitative Aptitude",
+    "target_id": 6,
+    "target_name": "SSC CGL"
+  },
+  {
+    "concept_id": 210,
+    "concept_name": "Profit, Loss and Discount",
+    "description": "Cost price, marked price, selling price, successive discounts, and dishonest dealer tricks",
+    "topic_name": "Percentage & Commercial Math",
+    "skill_name": "Quantitative Aptitude",
+    "target_id": 6,
+    "target_name": "SSC CGL"
+  },
+  {
+    "concept_id": 211,
+    "concept_name": "Simple & Compound Interest",
+    "description": "Annual, half-yearly compounding, difference between CI and SI for 2 and 3 years",
+    "topic_name": "Percentage & Commercial Math",
+    "skill_name": "Quantitative Aptitude",
+    "target_id": 6,
+    "target_name": "SSC CGL"
+  },
+  {
+    "concept_id": 212,
+    "concept_name": "Ratio, Proportion & Partnerships",
+    "description": "Mean/third/fourth proportional, compound ratios, and profit sharing by capital-time",
+    "topic_name": "Percentage & Commercial Math",
+    "skill_name": "Quantitative Aptitude",
+    "target_id": 6,
+    "target_name": "SSC CGL"
+  },
+  {
+    "concept_id": 213,
+    "concept_name": "Averages and Mixtures (Alligation)",
+    "description": "Weighted averages, rule of alligation, and replacement formulas",
+    "topic_name": "Percentage & Commercial Math",
+    "skill_name": "Quantitative Aptitude",
+    "target_id": 6,
+    "target_name": "SSC CGL"
+  },
+  {
+    "concept_id": 214,
+    "concept_name": "Triangles: Similarity and Congruence",
+    "description": "Angle bisector theorem, similarity criteria (AAA, SAS), and Apollonius theorem",
+    "topic_name": "Geometry & Mensuration",
+    "skill_name": "Quantitative Aptitude",
+    "target_id": 6,
+    "target_name": "SSC CGL"
+  },
+  {
+    "concept_id": 215,
+    "concept_name": "Triangle Centers: Incenter & Circumcenter",
+    "description": "Inradius, circumradius, orthocenter, centroid, and Euler line properties",
+    "topic_name": "Geometry & Mensuration",
+    "skill_name": "Quantitative Aptitude",
+    "target_id": 6,
+    "target_name": "SSC CGL"
+  },
+  {
+    "concept_id": 216,
+    "concept_name": "Circles, Chords and Tangents",
+    "description": "Alternate segment theorem, intersecting chords theorem, and direct common tangents",
+    "topic_name": "Geometry & Mensuration",
+    "skill_name": "Quantitative Aptitude",
+    "target_id": 6,
+    "target_name": "SSC CGL"
+  },
+  {
+    "concept_id": 217,
+    "concept_name": "2D Mensuration & Plane Figures",
+    "description": "Areas of quadrilaterals, trapeziums, rhombuses, and regular hexagons",
+    "topic_name": "Geometry & Mensuration",
+    "skill_name": "Quantitative Aptitude",
+    "target_id": 6,
+    "target_name": "SSC CGL"
+  },
+  {
+    "concept_id": 218,
+    "concept_name": "3D Solids: Cones, Cylinders & Spheres",
+    "description": "Curved surface area, total surface area, volume, and melting/recasting solids",
+    "topic_name": "Geometry & Mensuration",
+    "skill_name": "Quantitative Aptitude",
+    "target_id": 6,
+    "target_name": "SSC CGL"
+  },
+  {
+    "concept_id": 219,
+    "concept_name": "Algebraic Identities and Expansions",
+    "description": "x + 1/x formulas, sum of cubes, and symmetric polynomial evaluations",
+    "topic_name": "Algebra & Trigonometry",
+    "skill_name": "Quantitative Aptitude",
+    "target_id": 6,
+    "target_name": "SSC CGL"
+  },
+  {
+    "concept_id": 220,
+    "concept_name": "Quadratic Equations and Roots",
+    "description": "Discriminant, nature of roots, sum and product of roots (Vieta's formulas)",
+    "topic_name": "Algebra & Trigonometry",
+    "skill_name": "Quantitative Aptitude",
+    "target_id": 6,
+    "target_name": "SSC CGL"
+  },
+  {
+    "concept_id": 221,
+    "concept_name": "Trigonometric Ratios and Identities",
+    "description": "sin^2 + cos^2 = 1, complementary angles, and Pythagorean triplets",
+    "topic_name": "Algebra & Trigonometry",
+    "skill_name": "Quantitative Aptitude",
+    "target_id": 6,
+    "target_name": "SSC CGL"
+  },
+  {
+    "concept_id": 222,
+    "concept_name": "Heights and Distances",
+    "description": "Angle of elevation, angle of depression, and 30-60-90 / 45-45-90 triangles",
+    "topic_name": "Algebra & Trigonometry",
+    "skill_name": "Quantitative Aptitude",
+    "target_id": 6,
+    "target_name": "SSC CGL"
+  },
+  {
+    "concept_id": 223,
+    "concept_name": "Analogy and Classification",
+    "description": "Semantic, numerical, and letter cluster relationships and odd-one-out",
+    "topic_name": "Verbal Reasoning & Syllogism",
+    "skill_name": "General Intelligence & Reasoning",
+    "target_id": 6,
+    "target_name": "SSC CGL"
+  },
+  {
+    "concept_id": 224,
+    "concept_name": "Series Completion: Numbers & Letters",
+    "description": "Arithmetic, geometric, alternating, and alphanumeric patterns",
+    "topic_name": "Verbal Reasoning & Syllogism",
+    "skill_name": "General Intelligence & Reasoning",
+    "target_id": 6,
+    "target_name": "SSC CGL"
+  },
+  {
+    "concept_id": 225,
+    "concept_name": "Coding-Decoding & Substitution",
+    "description": "Direct letter shifting, reverse alphabet positions, and matrix codes",
+    "topic_name": "Verbal Reasoning & Syllogism",
+    "skill_name": "General Intelligence & Reasoning",
+    "target_id": 6,
+    "target_name": "SSC CGL"
+  },
+  {
+    "concept_id": 226,
+    "concept_name": "Direction Sense & Blood Relations",
+    "description": "Cardinal directions, shadows, turns, and coded family relationship trees",
+    "topic_name": "Verbal Reasoning & Syllogism",
+    "skill_name": "General Intelligence & Reasoning",
+    "target_id": 6,
+    "target_name": "SSC CGL"
+  },
+  {
+    "concept_id": 227,
+    "concept_name": "Syllogisms and Venn Diagrams",
+    "description": "Categorical syllogisms, 'Some', 'All', 'No', and 'Either-Or' conditions",
+    "topic_name": "Verbal Reasoning & Syllogism",
+    "skill_name": "General Intelligence & Reasoning",
+    "target_id": 6,
+    "target_name": "SSC CGL"
+  },
+  {
+    "concept_id": 228,
+    "concept_name": "Mirror and Water Images",
+    "description": "Lateral inversion, horizontal/vertical reflections of alphanumeric characters",
+    "topic_name": "Non-Verbal & Pattern Reasoning",
+    "skill_name": "General Intelligence & Reasoning",
+    "target_id": 6,
+    "target_name": "SSC CGL"
+  },
+  {
+    "concept_id": 229,
+    "concept_name": "Paper Folding and Cutting",
+    "description": "Symmetry axes, unfolding step sequences, and hole punch patterns",
+    "topic_name": "Non-Verbal & Pattern Reasoning",
+    "skill_name": "General Intelligence & Reasoning",
+    "target_id": 6,
+    "target_name": "SSC CGL"
+  },
+  {
+    "concept_id": 230,
+    "concept_name": "Embedded Figures & Pattern Completion",
+    "description": "Locating hidden sub-shapes within complex visual matrices",
+    "topic_name": "Non-Verbal & Pattern Reasoning",
+    "skill_name": "General Intelligence & Reasoning",
+    "target_id": 6,
+    "target_name": "SSC CGL"
+  },
+  {
+    "concept_id": 231,
+    "concept_name": "Dice and Cube Rotations",
+    "description": "Opposite face rules in open and closed dice configurations",
+    "topic_name": "Non-Verbal & Pattern Reasoning",
+    "skill_name": "General Intelligence & Reasoning",
+    "target_id": 6,
+    "target_name": "SSC CGL"
+  },
+  {
+    "concept_id": 232,
+    "concept_name": "Subject-Verb Agreement",
+    "description": "Singular/plural agreement with collective nouns, 'either...or', 'neither...nor'",
+    "topic_name": "Grammar & Error Spotting",
+    "skill_name": "English Comprehension",
+    "target_id": 6,
+    "target_name": "SSC CGL"
+  },
+  {
+    "concept_id": 233,
+    "concept_name": "Tenses and Conditionals",
+    "description": "Zero, first, second, third conditionals, past perfect vs simple past",
+    "topic_name": "Grammar & Error Spotting",
+    "skill_name": "English Comprehension",
+    "target_id": 6,
+    "target_name": "SSC CGL"
+  },
+  {
+    "concept_id": 234,
+    "concept_name": "Prepositions and Phrasal Verbs",
+    "description": "Fixed prepositions (depend on, adhere to, abstain from) and contextual phrasal meanings",
+    "topic_name": "Grammar & Error Spotting",
+    "skill_name": "English Comprehension",
+    "target_id": 6,
+    "target_name": "SSC CGL"
+  },
+  {
+    "concept_id": 235,
+    "concept_name": "Active and Passive Voice",
+    "description": "Transformation rules across tenses and imperative sentences",
+    "topic_name": "Grammar & Error Spotting",
+    "skill_name": "English Comprehension",
+    "target_id": 6,
+    "target_name": "SSC CGL"
+  },
+  {
+    "concept_id": 236,
+    "concept_name": "Direct and Indirect Speech (Narration)",
+    "description": "Reporting verbs, tense backshifting, and pronoun adjustments",
+    "topic_name": "Grammar & Error Spotting",
+    "skill_name": "English Comprehension",
+    "target_id": 6,
+    "target_name": "SSC CGL"
+  },
+  {
+    "concept_id": 237,
+    "concept_name": "Synonyms and Antonyms",
+    "description": "Contextual word definitions, connotations, and academic vocabulary",
+    "topic_name": "Vocabulary & Reading Comprehension",
+    "skill_name": "English Comprehension",
+    "target_id": 6,
+    "target_name": "SSC CGL"
+  },
+  {
+    "concept_id": 238,
+    "concept_name": "Idioms and Phrases",
+    "description": "Common English idioms, figurative expressions, and proverb interpretations",
+    "topic_name": "Vocabulary & Reading Comprehension",
+    "skill_name": "English Comprehension",
+    "target_id": 6,
+    "target_name": "SSC CGL"
+  },
+  {
+    "concept_id": 239,
+    "concept_name": "One Word Substitution",
+    "description": "Lexical terms for concepts, professions, phobias, and governments",
+    "topic_name": "Vocabulary & Reading Comprehension",
+    "skill_name": "English Comprehension",
+    "target_id": 6,
+    "target_name": "SSC CGL"
+  },
+  {
+    "concept_id": 240,
+    "concept_name": "Reading Comprehension & Cloze Tests",
+    "description": "Main idea, tone inference, fact retrieval, and contextual blank-filling",
+    "topic_name": "Vocabulary & Reading Comprehension",
+    "skill_name": "English Comprehension",
+    "target_id": 6,
+    "target_name": "SSC CGL"
+  },
+  {
+    "concept_id": 241,
+    "concept_name": "Physics: Mechanics & Optics",
+    "description": "Newton's laws, gravitation, reflection, refraction, lenses, and electric circuits",
+    "topic_name": "General Science & Static GK",
+    "skill_name": "General Awareness",
+    "target_id": 6,
+    "target_name": "SSC CGL"
+  },
+  {
+    "concept_id": 242,
+    "concept_name": "Chemistry: Acids, Bases & Metals",
+    "description": "pH scale, periodic trends, alloys, chemical bonding, and common commercial compounds",
+    "topic_name": "General Science & Static GK",
+    "skill_name": "General Awareness",
+    "target_id": 6,
+    "target_name": "SSC CGL"
+  },
+  {
+    "concept_id": 243,
+    "concept_name": "Biology: Human Physiology & Diseases",
+    "description": "Circulatory, digestive systems, vitamins, infectious pathogens, and immunity",
+    "topic_name": "General Science & Static GK",
+    "skill_name": "General Awareness",
+    "target_id": 6,
+    "target_name": "SSC CGL"
+  },
+  {
+    "concept_id": 244,
+    "concept_name": "Important Days, Honors & Classical Dances",
+    "description": "National celebrations, Nobel prizes, Sahitya Akademi, and 8 classical dance forms",
+    "topic_name": "General Science & Static GK",
+    "skill_name": "General Awareness",
+    "target_id": 6,
+    "target_name": "SSC CGL"
+  },
+  {
+    "concept_id": 245,
+    "concept_name": "Constitutional Articles & Schedules",
+    "description": "12 Schedules, Parts I-XXII, fundamental rights, and constitutional amendments",
+    "topic_name": "Polity & Modern History Basics",
+    "skill_name": "General Awareness",
+    "target_id": 6,
+    "target_name": "SSC CGL"
+  },
+  {
+    "concept_id": 246,
+    "concept_name": "Governor-Generals and Freedom Struggle",
+    "description": "1857 revolt milestones, Round Table Conferences, and key nationalist leaders",
+    "topic_name": "Polity & Modern History Basics",
+    "skill_name": "General Awareness",
+    "target_id": 6,
+    "target_name": "SSC CGL"
+  },
+  {
+    "concept_id": 247,
+    "concept_name": "Simplification & Approximation",
+    "description": "BODMAS, percentage fractions, square roots, and decimal round-offs",
+    "topic_name": "Speed Math & Arithmetic",
+    "skill_name": "Quantitative Aptitude & Data Interpretation",
+    "target_id": 7,
+    "target_name": "Banking (IBPS PO)"
+  },
+  {
+    "concept_id": 248,
+    "concept_name": "Ages & Partnership Calculations",
+    "description": "Linear age equations, sleeping/working partners, and profit ratios",
+    "topic_name": "Speed Math & Arithmetic",
+    "skill_name": "Quantitative Aptitude & Data Interpretation",
+    "target_id": 7,
+    "target_name": "Banking (IBPS PO)"
+  },
+  {
+    "concept_id": 249,
+    "concept_name": "Profit & Loss with Marked Price",
+    "description": "Successive discounts, discount on marked price, and breakeven sales",
+    "topic_name": "Speed Math & Arithmetic",
+    "skill_name": "Quantitative Aptitude & Data Interpretation",
+    "target_id": 7,
+    "target_name": "Banking (IBPS PO)"
+  },
+  {
+    "concept_id": 250,
+    "concept_name": "Time, Speed, Distance & Boats",
+    "description": "Upstream/downstream speed, trains crossing in opposite directions",
+    "topic_name": "Speed Math & Arithmetic",
+    "skill_name": "Quantitative Aptitude & Data Interpretation",
+    "target_id": 7,
+    "target_name": "Banking (IBPS PO)"
+  },
+  {
+    "concept_id": 251,
+    "concept_name": "Quadratic Comparison (x vs y)",
+    "description": "Sign method, root factorization, and establishing x > y or no relation",
+    "topic_name": "Quadratic Equations & Number Series",
+    "skill_name": "Quantitative Aptitude & Data Interpretation",
+    "target_id": 7,
+    "target_name": "Banking (IBPS PO)"
+  },
+  {
+    "concept_id": 252,
+    "concept_name": "Missing & Wrong Number Series",
+    "description": "Difference of difference, square/cube patterns, and alternating geometric jumps",
+    "topic_name": "Quadratic Equations & Number Series",
+    "skill_name": "Quantitative Aptitude & Data Interpretation",
+    "target_id": 7,
+    "target_name": "Banking (IBPS PO)"
+  },
+  {
+    "concept_id": 253,
+    "concept_name": "Data Sufficiency in Quant",
+    "description": "Evaluating whether Statement I or II alone is sufficient to answer",
+    "topic_name": "Quadratic Equations & Number Series",
+    "skill_name": "Quantitative Aptitude & Data Interpretation",
+    "target_id": 7,
+    "target_name": "Banking (IBPS PO)"
+  },
+  {
+    "concept_id": 254,
+    "concept_name": "Table & Bar Chart DI",
+    "description": "Tabular sales/production data, percentage growth, and average comparisons",
+    "topic_name": "Data Interpretation Formats",
+    "skill_name": "Quantitative Aptitude & Data Interpretation",
+    "target_id": 7,
+    "target_name": "Banking (IBPS PO)"
+  },
+  {
+    "concept_id": 255,
+    "concept_name": "Pie Chart & Degree Conversion",
+    "description": "Sector angles (360 deg = 100%), double pie charts, and ratio analysis",
+    "topic_name": "Data Interpretation Formats",
+    "skill_name": "Quantitative Aptitude & Data Interpretation",
+    "target_id": 7,
+    "target_name": "Banking (IBPS PO)"
+  },
+  {
+    "concept_id": 256,
+    "concept_name": "Line Graph & Caselet DI",
+    "description": "Trend analysis, paragraph-based arithmetic caselets, and Venn diagrams",
+    "topic_name": "Data Interpretation Formats",
+    "skill_name": "Quantitative Aptitude & Data Interpretation",
+    "target_id": 7,
+    "target_name": "Banking (IBPS PO)"
+  },
+  {
+    "concept_id": 257,
+    "concept_name": "Radar & Missing Data DI",
+    "description": "Multi-axial radar webs and deducing missing values using given totals",
+    "topic_name": "Data Interpretation Formats",
+    "skill_name": "Quantitative Aptitude & Data Interpretation",
+    "target_id": 7,
+    "target_name": "Banking (IBPS PO)"
+  },
+  {
+    "concept_id": 258,
+    "concept_name": "Permutations and Combinations",
+    "description": "Arrangement of letters/digits, circular permutations, and selection formulas",
+    "topic_name": "Probability & Mensuration",
+    "skill_name": "Quantitative Aptitude & Data Interpretation",
+    "target_id": 7,
+    "target_name": "Banking (IBPS PO)"
+  },
+  {
+    "concept_id": 259,
+    "concept_name": "Probability of Balls, Cards & Dice",
+    "description": "Independent events, with/without replacement, and conditional probability",
+    "topic_name": "Probability & Mensuration",
+    "skill_name": "Quantitative Aptitude & Data Interpretation",
+    "target_id": 7,
+    "target_name": "Banking (IBPS PO)"
+  },
+  {
+    "concept_id": 260,
+    "concept_name": "2D and 3D Mensuration",
+    "description": "Area and perimeter of circles/rectangles, cylinder and cone volume ratios",
+    "topic_name": "Probability & Mensuration",
+    "skill_name": "Quantitative Aptitude & Data Interpretation",
+    "target_id": 7,
+    "target_name": "Banking (IBPS PO)"
+  },
+  {
+    "concept_id": 261,
+    "concept_name": "Linear Seating Arrangement",
+    "description": "Single/parallel rows, North/South facing persons, and unknown count arrangements",
+    "topic_name": "Puzzles & Seating Arrangement",
+    "skill_name": "Reasoning Ability & Computer Aptitude",
+    "target_id": 7,
+    "target_name": "Banking (IBPS PO)"
+  },
+  {
+    "concept_id": 262,
+    "concept_name": "Circular & Square Seating",
+    "description": "Facing center vs facing outward, alternating positions, and dual variables",
+    "topic_name": "Puzzles & Seating Arrangement",
+    "skill_name": "Reasoning Ability & Computer Aptitude",
+    "target_id": 7,
+    "target_name": "Banking (IBPS PO)"
+  },
+  {
+    "concept_id": 263,
+    "concept_name": "Floor & Flat Based Puzzles",
+    "description": "Even/odd floors, vacant flats, and multiple variable allocations",
+    "topic_name": "Puzzles & Seating Arrangement",
+    "skill_name": "Reasoning Ability & Computer Aptitude",
+    "target_id": 7,
+    "target_name": "Banking (IBPS PO)"
+  },
+  {
+    "concept_id": 264,
+    "concept_name": "Box & Stack Puzzles",
+    "description": "Relative box positions, stacked shelves, and condition-based placement",
+    "topic_name": "Puzzles & Seating Arrangement",
+    "skill_name": "Reasoning Ability & Computer Aptitude",
+    "target_id": 7,
+    "target_name": "Banking (IBPS PO)"
+  },
+  {
+    "concept_id": 265,
+    "concept_name": "Month & Date Scheduling",
+    "description": "Scheduling events across months with 30/31 days and two date slots",
+    "topic_name": "Puzzles & Seating Arrangement",
+    "skill_name": "Reasoning Ability & Computer Aptitude",
+    "target_id": 7,
+    "target_name": "Banking (IBPS PO)"
+  },
+  {
+    "concept_id": 266,
+    "concept_name": "Inequalities (Coded & Direct)",
+    "description": "Statements with >, <, =, and evaluating conclusions definitively",
+    "topic_name": "Logical & Analytical Reasoning",
+    "skill_name": "Reasoning Ability & Computer Aptitude",
+    "target_id": 7,
+    "target_name": "Banking (IBPS PO)"
+  },
+  {
+    "concept_id": 267,
+    "concept_name": "Syllogisms: Only a Few & Possibility",
+    "description": "'Only a few A are B', 'Can never be', and possibility conclusions",
+    "topic_name": "Logical & Analytical Reasoning",
+    "skill_name": "Reasoning Ability & Computer Aptitude",
+    "target_id": 7,
+    "target_name": "Banking (IBPS PO)"
+  },
+  {
+    "concept_id": 268,
+    "concept_name": "Input-Output Step Processing",
+    "description": "Machine word-number shuffling, shifting vs shifting-and-sorting rules",
+    "topic_name": "Logical & Analytical Reasoning",
+    "skill_name": "Reasoning Ability & Computer Aptitude",
+    "target_id": 7,
+    "target_name": "Banking (IBPS PO)"
+  },
+  {
+    "concept_id": 269,
+    "concept_name": "Cause and Effect / Statement Assumptions",
+    "description": "Evaluating implicit assumptions, course of action, and causal links",
+    "topic_name": "Logical & Analytical Reasoning",
+    "skill_name": "Reasoning Ability & Computer Aptitude",
+    "target_id": 7,
+    "target_name": "Banking (IBPS PO)"
+  },
+  {
+    "concept_id": 270,
+    "concept_name": "Computer Hardware & Memory Hierarchy",
+    "description": "Registers, Cache (L1/L2), RAM, ROM, virtual memory, and SSDs",
+    "topic_name": "Computer Architecture & Networking",
+    "skill_name": "Reasoning Ability & Computer Aptitude",
+    "target_id": 7,
+    "target_name": "Banking (IBPS PO)"
+  },
+  {
+    "concept_id": 271,
+    "concept_name": "Networking & OSI Protocol Basics",
+    "description": "IP, TCP, UDP, MAC addresses, routers, switches, and subnet masks",
+    "topic_name": "Computer Architecture & Networking",
+    "skill_name": "Reasoning Ability & Computer Aptitude",
+    "target_id": 7,
+    "target_name": "Banking (IBPS PO)"
+  },
+  {
+    "concept_id": 272,
+    "concept_name": "Cyber Security & Virus Types",
+    "description": "Phishing, Trojans, ransomware, spyware, and two-factor authentication",
+    "topic_name": "Computer Architecture & Networking",
+    "skill_name": "Reasoning Ability & Computer Aptitude",
+    "target_id": 7,
+    "target_name": "Banking (IBPS PO)"
+  },
+  {
+    "concept_id": 273,
+    "concept_name": "Error Spotting in Complex Sentences",
+    "description": "Parallelism, modifier placement, inversion, and subjunctive mood",
+    "topic_name": "Grammar & Sentence Rearrangement",
+    "skill_name": "English Language",
+    "target_id": 7,
+    "target_name": "Banking (IBPS PO)"
+  },
+  {
+    "concept_id": 274,
+    "concept_name": "Para Jumbles & Sentence Rearrangement",
+    "description": "Mandatory pairs, acronym introductions, and chronological transitions",
+    "topic_name": "Grammar & Sentence Rearrangement",
+    "skill_name": "English Language",
+    "target_id": 7,
+    "target_name": "Banking (IBPS PO)"
+  },
+  {
+    "concept_id": 275,
+    "concept_name": "Cloze Test & Word Swap",
+    "description": "Contextual word replacement, interchange of highlighted words, and tone",
+    "topic_name": "Grammar & Sentence Rearrangement",
+    "skill_name": "English Language",
+    "target_id": 7,
+    "target_name": "Banking (IBPS PO)"
+  },
+  {
+    "concept_id": 276,
+    "concept_name": "Sentence Improvement & Fillers",
+    "description": "Double fillers, idiom completions, and precision vocabulary usage",
+    "topic_name": "Grammar & Sentence Rearrangement",
+    "skill_name": "English Language",
+    "target_id": 7,
+    "target_name": "Banking (IBPS PO)"
+  },
+  {
+    "concept_id": 277,
+    "concept_name": "Banking Reading Comprehension",
+    "description": "Financial editorial passages, inference-based questions, and central themes",
+    "topic_name": "Vocabulary & Reading Comprehension",
+    "skill_name": "English Language",
+    "target_id": 7,
+    "target_name": "Banking (IBPS PO)"
+  },
+  {
+    "concept_id": 278,
+    "concept_name": "Contextual Vocabulary & Antonyms",
+    "description": "Polysemous words in economic context (e.g. rally, bubble, default)",
+    "topic_name": "Vocabulary & Reading Comprehension",
+    "skill_name": "English Language",
+    "target_id": 7,
+    "target_name": "Banking (IBPS PO)"
+  },
+  {
+    "concept_id": 279,
+    "concept_name": "RBI Structure & Preamble",
+    "description": "Central Board, subsidiary bodies (DICGC, BRBNMPL, ReBIT, IFTAS)",
+    "topic_name": "RBI & Monetary Policy",
+    "skill_name": "General & Banking Awareness",
+    "target_id": 7,
+    "target_name": "Banking (IBPS PO)"
+  },
+  {
+    "concept_id": 280,
+    "concept_name": "Monetary Policy Tools (LAF, MSF, SDF)",
+    "description": "Standing Deposit Facility, Marginal Standing Facility, and corridor width",
+    "topic_name": "RBI & Monetary Policy",
+    "skill_name": "General & Banking Awareness",
+    "target_id": 7,
+    "target_name": "Banking (IBPS PO)"
+  },
+  {
+    "concept_id": 281,
+    "concept_name": "Currency Management & Digital Rupee (CBDC)",
+    "description": "Clean Note Policy, demonetization history, and retail/wholesale CBDC",
+    "topic_name": "RBI & Monetary Policy",
+    "skill_name": "General & Banking Awareness",
+    "target_id": 7,
+    "target_name": "Banking (IBPS PO)"
+  },
+  {
+    "concept_id": 282,
+    "concept_name": "Types of Bank Accounts & Negotiable Instruments",
+    "description": "CASA, NRE/NRO, Cheque truncation system (CTS), promissory notes",
+    "topic_name": "Banking Operations & Financial Terms",
+    "skill_name": "General & Banking Awareness",
+    "target_id": 7,
+    "target_name": "Banking (IBPS PO)"
+  },
+  {
+    "concept_id": 283,
+    "concept_name": "NPA Classification & Resolution Framework",
+    "description": "SMA-0, SMA-1, SMA-2, Substandard, Doubtful, Loss assets, and SARFAESI",
+    "topic_name": "Banking Operations & Financial Terms",
+    "skill_name": "General & Banking Awareness",
+    "target_id": 7,
+    "target_name": "Banking (IBPS PO)"
+  },
+  {
+    "concept_id": 284,
+    "concept_name": "Basel III Norms & Capital Adequacy (CRAR)",
+    "description": "Tier-1 capital, Tier-2 capital, Capital Conservation Buffer (CCB)",
+    "topic_name": "Banking Operations & Financial Terms",
+    "skill_name": "General & Banking Awareness",
+    "target_id": 7,
+    "target_name": "Banking (IBPS PO)"
+  },
+  {
+    "concept_id": 285,
+    "concept_name": "Priority Sector Lending (PSL) Targets",
+    "description": "40% mandate, agriculture, MSME, export credit, and PSL certificates",
+    "topic_name": "Banking Operations & Financial Terms",
+    "skill_name": "General & Banking Awareness",
+    "target_id": 7,
+    "target_name": "Banking (IBPS PO)"
+  },
+  {
+    "concept_id": 286,
+    "concept_name": "Payment Systems: UPI, NEFT, RTGS & IMPS",
+    "description": "NPCI, settlement cycles, transaction limits, and RTGS 24x7 operations",
+    "topic_name": "Current Financial Affairs",
+    "skill_name": "General & Banking Awareness",
+    "target_id": 7,
+    "target_name": "Banking (IBPS PO)"
+  },
+  {
+    "concept_id": 287,
+    "concept_name": "Financial Inclusion Schemes (PMJDY, PMSBY)",
+    "description": "Overdraft facilities, direct benefit transfer (DBT), and micro-insurance",
+    "topic_name": "Current Financial Affairs",
+    "skill_name": "General & Banking Awareness",
+    "target_id": 7,
+    "target_name": "Banking (IBPS PO)"
+  }
+]

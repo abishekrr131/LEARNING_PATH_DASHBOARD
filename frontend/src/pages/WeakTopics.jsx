@@ -9,6 +9,11 @@ export default function WeakTopics() {
   const [error, setError] = useState(null);
   const [filterBand, setFilterBand] = useState("all");
 
+  const [mistakeData, setMistakeData] = useState(null);
+  const [loadingMistakes, setLoadingMistakes] = useState(true);
+  const [expandedSessionId, setExpandedSessionId] = useState(null);
+  const [viewFilter, setViewFilter] = useState("mistakes");
+
   useEffect(() => {
     analyticsApi
       .getGaps()
@@ -21,6 +26,17 @@ export default function WeakTopics() {
         setData({ gaps: [] });
       })
       .finally(() => setLoading(false));
+
+    analyticsApi
+      .getMistakeHistory()
+      .then((res) => {
+        setMistakeData(res);
+      })
+      .catch((err) => {
+        console.error("Failed to load mistake history:", err);
+        setMistakeData({ sessions: [], total_sessions: 0, total_mistakes: 0 });
+      })
+      .finally(() => setLoadingMistakes(false));
   }, []);
 
   const gaps = data?.gaps || [];
@@ -113,6 +129,322 @@ export default function WeakTopics() {
             </div>
           </div>
         )}
+
+        {/* Assessment Mistake History Section */}
+        <div className="space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div>
+              <h2 className="text-lg font-black text-gray-900 dark:text-white flex items-center gap-2">
+                <span>🔍</span> Assessment Mistake History & Question Review
+              </h2>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                Review specific questions answered incorrectly or skipped in your Initial Diagnostic, Week 1, and Week 2 assessments with complete explanations.
+              </p>
+            </div>
+            {mistakeData?.sessions?.length > 0 && (
+              <div className="flex items-center space-x-2 text-xs">
+                <span className="text-gray-400 text-[11px]">Filter View:</span>
+                <button
+                  type="button"
+                  onClick={() => setViewFilter("mistakes")}
+                  className={`px-3 py-1.5 rounded-lg font-bold transition-all ${
+                    viewFilter === "mistakes"
+                      ? "bg-rose-600 text-white shadow-md shadow-rose-500/20"
+                      : "bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400"
+                  }`}
+                >
+                  Mistakes Only ({mistakeData.total_mistakes})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setViewFilter("all")}
+                  className={`px-3 py-1.5 rounded-lg font-bold transition-all ${
+                    viewFilter === "all"
+                      ? "bg-purple-600 text-white shadow-md shadow-purple-500/20"
+                      : "bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400"
+                  }`}
+                >
+                  All Questions
+                </button>
+              </div>
+            )}
+          </div>
+
+          {loadingMistakes ? (
+            <div className="p-8 text-center bg-white dark:bg-gray-900 rounded-3xl border border-gray-100 dark:border-gray-800 text-xs text-gray-400">
+              Loading mistake history…
+            </div>
+          ) : !mistakeData || mistakeData.sessions.length === 0 ? (
+            <div className="p-8 text-center bg-white dark:bg-gray-900 rounded-3xl border border-dashed border-gray-300 dark:border-gray-800 space-y-3">
+              <div className="text-3xl">📋</div>
+              <h3 className="text-sm font-bold text-gray-900 dark:text-white">
+                No Assessment Mistakes Recorded Yet
+              </h3>
+              <p className="text-xs text-gray-500 dark:text-gray-400 max-w-md mx-auto">
+                Once you complete your Initial Diagnostic or Weekly Tests, any incorrect or skipped questions will be documented here with detailed explanations.
+              </p>
+              <Link
+                to="/diagnostic/instructions"
+                className="inline-block px-4 py-2 rounded-xl font-bold text-xs bg-purple-600 hover:bg-purple-700 text-white shadow-md transition-all"
+              >
+                Take Initial Diagnostic →
+              </Link>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {/* Session Accordion Cards */}
+              {mistakeData.sessions.map((session) => {
+                const isExpanded = expandedSessionId === session.assessment_id;
+                const itemsToShow = viewFilter === "mistakes" ? session.mistakes : session.all_items;
+                const dateStr = session.completed_at
+                  ? new Date(session.completed_at).toLocaleDateString(undefined, {
+                      month: "short",
+                      day: "numeric",
+                      year: "numeric",
+                    })
+                  : "";
+
+                return (
+                  <div
+                    key={session.assessment_id}
+                    className="bg-white dark:bg-gray-900 rounded-3xl border border-purple-100 dark:border-purple-900/40 shadow-sm overflow-hidden transition-all"
+                  >
+                    {/* Session Header Card (Clickable to toggle) */}
+                    <div
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => setExpandedSessionId(isExpanded ? null : session.assessment_id)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          setExpandedSessionId(isExpanded ? null : session.assessment_id);
+                        }
+                      }}
+                      className="p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 cursor-pointer hover:bg-purple-50/30 dark:hover:bg-purple-950/20 transition-all select-none"
+                    >
+                      <div className="flex items-center space-x-3.5">
+                        <div
+                          className={`w-10 h-10 rounded-2xl flex items-center justify-center font-bold text-lg ${
+                            session.mistakes_count > 0
+                              ? "bg-rose-100 dark:bg-rose-950/60 text-rose-600 border border-rose-200 dark:border-rose-800"
+                              : "bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 border border-emerald-200 dark:border-emerald-800"
+                          }`}
+                        >
+                          {session.mistakes_count > 0 ? "⚠️" : "✓"}
+                        </div>
+                        <div>
+                          <div className="flex items-center space-x-2">
+                            <h3 className="text-base font-black text-gray-900 dark:text-white">
+                              {session.title}
+                            </h3>
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-purple-100 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300">
+                              {session.short_label}
+                            </span>
+                          </div>
+                          <div className="flex items-center space-x-3 text-xs text-gray-400 mt-0.5">
+                            {dateStr && <span>Completed {dateStr}</span>}
+                            <span>•</span>
+                            <span>
+                              Score: <strong className="text-gray-700 dark:text-gray-300">{session.score_pct}%</strong> ({session.correct_count}/{session.total_questions} correct)
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center space-x-3 self-end sm:self-auto">
+                        <span
+                          className={`px-3 py-1 rounded-full text-xs font-black ${
+                            session.mistakes_count > 0
+                              ? "bg-rose-100 text-rose-700 dark:bg-rose-950/50 dark:text-rose-300 border border-rose-200 dark:border-rose-800"
+                              : "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800"
+                          }`}
+                        >
+                          {session.mistakes_count > 0
+                            ? `${session.mistakes_count} Mistake${session.mistakes_count > 1 ? "s" : ""}`
+                            : "100% Accurate"}
+                        </span>
+                        <span className="text-xs font-bold text-purple-600 dark:text-purple-400">
+                          {isExpanded ? "Collapse ▲" : "View Mistakes ▼"}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Expanded Content (Questions and Explanations) */}
+                    {isExpanded && (
+                      <div className="p-6 border-t border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-950/30 space-y-6">
+                        {itemsToShow.length === 0 ? (
+                          <div className="p-8 text-center bg-white dark:bg-gray-900 rounded-2xl border border-emerald-200 dark:border-emerald-900/40">
+                            <span className="text-3xl block mb-2">🎉</span>
+                            <h4 className="text-sm font-bold text-emerald-700 dark:text-emerald-300">
+                              No Mistakes in this Assessment!
+                            </h4>
+                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                              Every question in this session was answered correctly ({session.total_questions}/{session.total_questions}).
+                            </p>
+                          </div>
+                        ) : (
+                          <div className="space-y-4">
+                            <div className="flex items-center justify-between text-xs text-gray-500">
+                              <span>
+                                Showing <strong>{itemsToShow.length}</strong> {viewFilter === "mistakes" ? "mistakes" : "questions"} in {session.title}:
+                              </span>
+                            </div>
+
+                            {itemsToShow.map((item, qIdx) => {
+                              const isWrong = !item.is_correct && !item.skipped;
+                              const isSkipped = item.skipped;
+                              const isCorrect = item.is_correct;
+
+                              return (
+                                <div
+                                  key={item.question_id || qIdx}
+                                  className={`p-5 rounded-2xl border transition-all ${
+                                    isWrong
+                                      ? "bg-white dark:bg-gray-900 border-rose-200 dark:border-rose-900/60 shadow-sm"
+                                      : isSkipped
+                                      ? "bg-white dark:bg-gray-900 border-amber-200 dark:border-amber-900/60 shadow-sm"
+                                      : "bg-white dark:bg-gray-900 border-emerald-200 dark:border-emerald-900/60 shadow-sm"
+                                  }`}
+                                >
+                                  {/* Question Header */}
+                                  <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+                                    <div className="flex items-center space-x-2">
+                                      <span
+                                        className={`px-2.5 py-0.5 rounded-full text-[11px] font-black ${
+                                          isWrong
+                                            ? "bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300"
+                                            : isSkipped
+                                            ? "bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300"
+                                            : "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300"
+                                        }`}
+                                      >
+                                        {isWrong ? "✗ Incorrect" : isSkipped ? "⊘ Skipped" : "✓ Correct"}
+                                      </span>
+                                      <span className="text-xs font-bold text-gray-400">
+                                        Question #{qIdx + 1}
+                                      </span>
+                                    </div>
+
+                                    <div className="flex flex-wrap items-center gap-1.5 text-[10px]">
+                                      <span className="px-2 py-0.5 rounded bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 font-medium">
+                                        {item.skill_name}
+                                      </span>
+                                      <span className="px-2 py-0.5 rounded bg-purple-50 dark:bg-purple-950/50 text-purple-700 dark:text-purple-300 font-semibold border border-purple-200 dark:border-purple-800">
+                                        {item.topic_name}
+                                      </span>
+                                      <span className="px-2 py-0.5 rounded bg-indigo-50 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300 font-semibold border border-indigo-200 dark:border-indigo-800">
+                                        {item.concept_name}
+                                      </span>
+                                    </div>
+                                  </div>
+
+                                  {/* Question Stem */}
+                                  <p className="text-sm font-semibold text-gray-900 dark:text-white leading-relaxed mb-4">
+                                    {item.question_text}
+                                  </p>
+
+                                  {/* MCQ Options Display */}
+                                  {item.options && Object.keys(item.options).length > 0 && (
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 mb-4">
+                                      {Object.entries(item.options).map(([optKey, optVal]) => {
+                                        const wasSelected = item.selected_answer === optKey;
+                                        const isTheCorrect = item.correct_answer === optKey;
+
+                                        return (
+                                          <div
+                                            key={optKey}
+                                            className={`p-3 rounded-xl border text-xs flex items-start space-x-2.5 transition-all ${
+                                              isTheCorrect
+                                                ? "bg-emerald-50 dark:bg-emerald-950/30 border-emerald-400 dark:border-emerald-600 text-emerald-950 dark:text-emerald-200 font-semibold shadow-sm"
+                                                : wasSelected && !isTheCorrect
+                                                ? "bg-rose-50 dark:bg-rose-950/30 border-rose-400 dark:border-rose-600 text-rose-950 dark:text-rose-200 line-through opacity-90 shadow-sm"
+                                                : "bg-gray-50/70 dark:bg-gray-800/40 border-gray-200 dark:border-gray-800 text-gray-700 dark:text-gray-300"
+                                            }`}
+                                          >
+                                            <span
+                                              className={`w-6 h-6 rounded-lg flex items-center justify-center font-bold text-[11px] shrink-0 ${
+                                                isTheCorrect
+                                                  ? "bg-emerald-600 text-white"
+                                                  : wasSelected
+                                                  ? "bg-rose-600 text-white"
+                                                  : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300"
+                                              }`}
+                                            >
+                                              {optKey}
+                                            </span>
+                                            <div className="flex-1">
+                                              <span>{optVal}</span>
+                                              {isTheCorrect && (
+                                                <span className="block text-[10px] text-emerald-600 dark:text-emerald-400 font-bold mt-0.5">
+                                                  ✓ Correct Answer
+                                                </span>
+                                              )}
+                                              {wasSelected && !isTheCorrect && (
+                                                <span className="block text-[10px] text-rose-600 dark:text-rose-400 font-bold mt-0.5">
+                                                  ✗ Your Choice
+                                                </span>
+                                              )}
+                                            </div>
+                                          </div>
+                                        );
+                                      })}
+                                    </div>
+                                  )}
+
+                                  {/* Answer Comparison Summary Callout */}
+                                  <div className="p-3.5 rounded-xl bg-gray-100/70 dark:bg-gray-800/60 border border-gray-200 dark:border-gray-700 flex flex-wrap items-center justify-between gap-3 text-xs mb-3">
+                                    <div className="flex items-center space-x-2">
+                                      <span className="text-gray-500 text-[11px]">Your Answer:</span>
+                                      <span
+                                        className={`font-bold px-2 py-0.5 rounded text-[11px] ${
+                                          item.is_correct
+                                            ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300"
+                                            : item.skipped
+                                            ? "bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300"
+                                            : "bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300"
+                                        }`}
+                                      >
+                                        {item.skipped ? "Skipped" : `[${item.selected_answer}] ${item.selected_text}`}
+                                      </span>
+                                    </div>
+
+                                    <div className="flex items-center space-x-2">
+                                      <span className="text-gray-500 text-[11px]">Correct Answer:</span>
+                                      <span className="font-bold px-2 py-0.5 rounded text-[11px] bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300">
+                                        [{item.correct_answer}] {item.correct_text}
+                                      </span>
+                                    </div>
+
+                                    {item.response_time_ms > 0 && (
+                                      <div className="text-[11px] text-gray-400 font-mono">
+                                        Time: {(item.response_time_ms / 1000).toFixed(1)}s
+                                      </div>
+                                    )}
+                                  </div>
+
+                                  {/* Detailed Explanation Box */}
+                                  {item.explanation && (
+                                    <div className="p-3.5 rounded-xl bg-purple-50/60 dark:bg-purple-950/20 border border-purple-100 dark:border-purple-900/50 text-xs">
+                                      <div className="font-bold text-purple-700 dark:text-purple-300 flex items-center gap-1.5 mb-1">
+                                        <span>💡</span> Detailed Explanation:
+                                      </div>
+                                      <p className="text-gray-700 dark:text-gray-300 text-[12px] leading-relaxed">
+                                        {item.explanation}
+                                      </p>
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
 
         {/* Subject-by-Subject Progression Rules Card */}
         {subjectRecs.length > 0 && (
@@ -244,6 +576,17 @@ export default function WeakTopics() {
                   <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
                     {week1Plan.map((item, idx) => {
                       const isTest = item.activity_type === "weekly_test";
+                      const dynamicDate = (() => {
+                        const d = new Date();
+                        d.setDate(d.getDate() + idx);
+                        const iso = d.toISOString().split("T")[0];
+                        // If item.scheduled_date exists and is today or future, use it; otherwise dynamicDate
+                        if (item.scheduled_date) {
+                          const todayStr = new Date().toISOString().split("T")[0];
+                          if (item.scheduled_date >= todayStr) return item.scheduled_date;
+                        }
+                        return iso;
+                      })();
                       return (
                         <tr key={item.id || idx} className="hover:bg-purple-50/20 dark:hover:bg-purple-900/10">
                           <td className="px-5 py-4 whitespace-nowrap">
@@ -251,7 +594,7 @@ export default function WeakTopics() {
                               Day {idx + 1}
                             </span>
                             <span className="text-[10px] text-gray-400 font-mono">
-                              {item.scheduled_date}
+                              {dynamicDate}
                             </span>
                           </td>
                           <td className="px-5 py-4 font-semibold text-purple-700 dark:text-purple-300">

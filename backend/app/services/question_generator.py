@@ -15,6 +15,7 @@ import logging
 import math
 import random
 from typing import Any
+from fastapi import HTTPException, status
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
@@ -447,22 +448,26 @@ def generate_initial_diagnostic_questions(
         unanswered = [q for q in candidates if q.id not in answered_q_ids and q.id not in chosen_q_ids]
         pool = unanswered if unanswered else [q for q in candidates if q.id not in chosen_q_ids]
         if pool:
-            chosen = pool[0]
+            # Randomly select from pool so both newly added and existing questions are actively drawn
+            chosen = random.choice(pool)
             final_db_questions.append(chosen)
             chosen_q_ids.add(chosen.id)
 
     # If short of 10, fill from any remaining approved questions in target
     if len(final_db_questions) < 10:
-        extra_candidates = db.execute(
-            select(Question)
-            .join(Concept, Question.concept_id == Concept.id)
-            .join(Topic, Concept.topic_id == Topic.id)
-            .join(Skill, Topic.skill_id == Skill.id)
-            .where(
-                Skill.target_id == target.id,
-                Question.review_status.in_(["approved", "curated", "generated"]),
-            )
-        ).scalars().all()
+        extra_candidates = list(
+            db.execute(
+                select(Question)
+                .join(Concept, Question.concept_id == Concept.id)
+                .join(Topic, Concept.topic_id == Topic.id)
+                .join(Skill, Topic.skill_id == Skill.id)
+                .where(
+                    Skill.target_id == target.id,
+                    Question.review_status.in_(["approved", "curated", "generated"]),
+                )
+            ).scalars().all()
+        )
+        random.shuffle(extra_candidates)
         for q in extra_candidates:
             if q.id not in chosen_q_ids and q.id not in answered_q_ids:
                 final_db_questions.append(q)
@@ -986,32 +991,37 @@ def generate_weekly_test_questions(
     final_questions: list[Question] = []
 
     for cid in c_sample_pool:
-        c_questions = db.execute(
-            select(Question).where(
-                Question.concept_id == cid,
-                Question.review_status.in_(["approved", "curated", "generated"]),
-            )
-        ).scalars().all()
-        for q in c_questions:
-            if q.id not in answered_qids and q.id not in chosen_qids:
-                final_questions.append(q)
-                chosen_qids.add(q.id)
-                break
+        c_questions = list(
+            db.execute(
+                select(Question).where(
+                    Question.concept_id == cid,
+                    Question.review_status.in_(["approved", "curated", "generated"]),
+                )
+            ).scalars().all()
+        )
+        eligible = [q for q in c_questions if q.id not in answered_qids and q.id not in chosen_qids]
+        if eligible:
+            chosen = random.choice(eligible)
+            final_questions.append(chosen)
+            chosen_qids.add(chosen.id)
         if len(final_questions) >= 20:
             break
 
     # If still under 20, draw from any approved questions in the target curriculum not yet answered
     if len(final_questions) < 20:
-        all_target_qs = db.execute(
-            select(Question)
-            .join(Concept, Question.concept_id == Concept.id)
-            .join(Topic, Concept.topic_id == Topic.id)
-            .join(Skill, Topic.skill_id == Skill.id)
-            .where(
-                Skill.target_id == target.id,
-                Question.review_status.in_(["approved", "curated", "generated"]),
-            )
-        ).scalars().all()
+        all_target_qs = list(
+            db.execute(
+                select(Question)
+                .join(Concept, Question.concept_id == Concept.id)
+                .join(Topic, Concept.topic_id == Topic.id)
+                .join(Skill, Topic.skill_id == Skill.id)
+                .where(
+                    Skill.target_id == target.id,
+                    Question.review_status.in_(["approved", "curated", "generated"]),
+                )
+            ).scalars().all()
+        )
+        random.shuffle(all_target_qs)
         for q in all_target_qs:
             if q.id not in answered_qids and q.id not in chosen_qids:
                 final_questions.append(q)
@@ -1128,6 +1138,32 @@ def pregenerate_weekly_test_for_user(user_id: int, target_id: int) -> None:
             logger.warning("Background weekly test pre-generation encountered error: %s", e)
 
 
+def map_govt_skill_to_category(skill_name: str) -> str:
+    """Maps government exam skill names to the four standard categories:
+    1. Aptitude
+    2. Reasoning
+    3. Verbal
+    4. General Awareness
+
+    Uses a priority-ordered approach: checks more specific patterns first to
+    avoid misclassifying e.g. 'Reasoning Ability & Computer Aptitude' as Aptitude.
+    """
+    s_lower = skill_name.lower()
+    # Check Reasoning BEFORE Aptitude because some skills like
+    # "Reasoning Ability & Computer Aptitude" contain both keywords
+    if s_lower.startswith("reasoning") or s_lower.startswith("general intelligence"):
+        return "Reasoning"
+    elif any(k in s_lower for k in ["quant", "aptitude", "math", "numerical"]):
+        return "Aptitude"
+    elif any(k in s_lower for k in ["reasoning", "intelligence", "logical"]):
+        return "Reasoning"
+    elif any(k in s_lower for k in ["english", "verbal", "language", "comprehension"]):
+        return "Verbal"
+    elif any(k in s_lower for k in ["awareness", "general", "banking", "current", "gk"]):
+        return "General Awareness"
+    return skill_name
+
+
 def generate_practice_questions(
     db: Session,
     target: CareerTarget,
@@ -1140,58 +1176,186 @@ def generate_practice_questions(
 ) -> tuple[int, list[dict[str, Any]]]:
     """Generates practice questions for untimed practice, combined test (60m), or speed test (90s).
     Questions are strictly pulled from the approved question bank.
+    For Combined Test (Government Exams), strictly balances questions across the 4 categories
+    (Aptitude, Reasoning, Verbal, General Awareness) and across topics within each category.
+    Never silently backfills across categories; raises HTTP 400 on insufficient inventory.
     """
+    target_count = (
+        40 if practice_mode == "combined" and (count is None or count == 5)
+        else (10 if practice_mode == "speed" and (count is None or count == 5)
+        else (count or 5))
+    )
+
+    # 0. Check for active incomplete practice session of the same mode and target for this user to support instant resume on refresh/reopening
+    active_asmt = db.execute(
+        select(Assessment)
+        .where(
+            Assessment.user_id == current_user_id,
+            Assessment.target_id == target.id,
+            Assessment.type == "practice",
+            Assessment.completed_at.is_(None),
+        )
+        .order_by(Assessment.started_at.desc())
+    ).scalars().first()
+
+    if active_asmt:
+        existing_aqs = db.execute(
+            select(AssessmentQuestion, Question, Concept.name, Topic.name, Skill.name)
+            .join(Question, AssessmentQuestion.question_id == Question.id)
+            .join(Concept, Question.concept_id == Concept.id)
+            .join(Topic, Concept.topic_id == Topic.id)
+            .join(Skill, Topic.skill_id == Skill.id)
+            .where(
+                AssessmentQuestion.assessment_id == active_asmt.id,
+                AssessmentQuestion.phase.in_([practice_mode, "practice"]),
+            )
+            .order_by(AssessmentQuestion.order_index)
+        ).all()
+
+        if existing_aqs and (count is None or len(existing_aqs) == target_count):
+            time_limit_sec = 3600 if practice_mode == "combined" else (90 if practice_mode == "speed" else None)
+            items_out = []
+            for aq, q, cname, tname, sname in existing_aqs:
+                items_out.append({
+                    "question_id": q.id,
+                    "order_index": aq.order_index + 1,
+                    "concept_id": q.concept_id,
+                    "concept_name": cname,
+                    "topic_id": q.concept.topic_id if q.concept else None,
+                    "topic_name": tname,
+                    "skill_name": sname,
+                    "question_text": q.question_text,
+                    "stem": q.question_text,
+                    "text": q.question_text,
+                    "options": to_options_list(q.options),
+                    "difficulty_b": round(q.difficulty_b, 2),
+                    "difficulty": round(q.difficulty_b, 2),
+                    "source": q.source or "curated",
+                    "correct_option": q.correct_answer,
+                    "explanation": q.explanation or "Standard syllabus worked explanation.",
+                    "time_limit_sec": time_limit_sec,
+                })
+            return active_asmt.id, items_out
+
     final_questions: list[tuple[Question, str, str, str]] = []  # (question, concept_name, topic_name, skill_name)
 
     if practice_mode == "combined":
-        from backend.app.api.diagnostic import allocate_questions_largest_remainder
-
         skills = db.execute(
-            select(Skill).where(Skill.target_id == target.id).order_by(Skill.weight.desc())
+            select(Skill).where(Skill.target_id == target.id).order_by(Skill.id)
         ).scalars().all()
-        target_count = 40 if (count is None or count == 5) else count
-        quotas = allocate_questions_largest_remainder(skills, total_items=target_count)
 
+        is_govt = (target.category == "govt_exam")
+        skill_to_cat = {s.id: (map_govt_skill_to_category(s.name) if is_govt else s.name) for s in skills}
+        unique_cats = list(dict.fromkeys(skill_to_cat.values()))
+
+        # Canonical category ordering for Government Exams
+        standard_govt_order = ["Aptitude", "Reasoning", "Verbal", "General Awareness"]
+        if is_govt and all(c in unique_cats for c in standard_govt_order):
+            categories_ordered = standard_govt_order
+        else:
+            categories_ordered = unique_cats
+
+        num_categories = len(categories_ordered)
+        base_quota = target_count // num_categories
+        remainder = target_count % num_categories
+
+        # Deterministic remainder policy: first `remainder` categories receive base + 1, rest receive base
+        category_quotas: dict[str, int] = {}
+        for idx, cat_name in enumerate(categories_ordered):
+            category_quotas[cat_name] = base_quota + (1 if idx < remainder else 0)
+
+        # Map each category to its skills
+        cat_to_skills: dict[str, list[Skill]] = {c: [] for c in categories_ordered}
         for s in skills:
-            s_quota = quotas.get(s.id, 0)
-            if s_quota <= 0:
-                continue
-            s_questions = db.execute(
-                select(Question, Concept.name, Topic.name)
-                .join(Concept, Question.concept_id == Concept.id)
-                .join(Topic, Concept.topic_id == Topic.id)
-                .where(
-                    Topic.skill_id == s.id,
-                    Question.review_status.in_(["approved", "curated", "generated"]),
-                )
-            ).all()
-            if s_questions:
-                sample_k = min(s_quota, len(s_questions))
-                sampled = random.sample(s_questions, sample_k)
-                for q, cname, tname in sampled:
-                    final_questions.append((q, cname, tname, s.name))
+            cat = skill_to_cat[s.id]
+            if cat in cat_to_skills:
+                cat_to_skills[cat].append(s)
+            else:
+                cat_to_skills[categories_ordered[0]].append(s)
 
-        # If short of target_count, fill from target pool
-        if len(final_questions) < target_count:
-            existing_ids = {q.id for q, _, _, _ in final_questions}
-            extra_pool = db.execute(
-                select(Question, Concept.name, Topic.name, Skill.name)
+        selected_by_category: list[tuple[Question, str, str, str]] = []
+        selected_q_ids: set[int] = set()
+
+        for cat_name in categories_ordered:
+            quota = category_quotas[cat_name]
+            if quota <= 0:
+                continue
+
+            cat_skills = cat_to_skills[cat_name]
+            cat_skill_ids = [s.id for s in cat_skills]
+
+            # Query all eligible questions for this category
+            candidate_rows = db.execute(
+                select(Question, Concept.name, Topic.name, Topic.id, Skill.name)
                 .join(Concept, Question.concept_id == Concept.id)
                 .join(Topic, Concept.topic_id == Topic.id)
                 .join(Skill, Topic.skill_id == Skill.id)
                 .where(
+                    Skill.id.in_(cat_skill_ids),
                     Skill.target_id == target.id,
                     Question.review_status.in_(["approved", "curated", "generated"]),
                 )
             ).all()
-            extra_pool_list = list(extra_pool)
-            random.shuffle(extra_pool_list)
-            for q, cname, tname, sname in extra_pool_list:
-                if q.id not in existing_ids:
-                    final_questions.append((q, cname, tname, sname))
-                    existing_ids.add(q.id)
-                    if len(final_questions) >= target_count:
-                        break
+
+            # Filter out questions already selected in earlier categories
+            available_rows = [r for r in candidate_rows if r[0].id not in selected_q_ids]
+
+            # Strict check: Never silently change distribution or backfill from other categories
+            if len(available_rows) < quota:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=(
+                        f"Insufficient question bank inventory for category '{cat_name}': "
+                        f"required {quota}, but only {len(available_rows)} eligible questions "
+                        f"available for {target.name}."
+                    ),
+                )
+
+            # Within the category, distribute questions across eligible topics
+            topic_dict: dict[int, list[tuple[Question, str, str, str]]] = {}
+            for q, cname, tname, tid, sname in available_rows:
+                topic_dict.setdefault(tid, []).append((q, cname, tname, sname))
+
+            topic_ids = list(topic_dict.keys())
+            base_topic_quota = quota // len(topic_ids)
+            topic_rem = quota % len(topic_ids)
+            topic_quotas = {
+                t_id: base_topic_quota + (1 if t_idx < topic_rem else 0)
+                for t_idx, t_id in enumerate(topic_ids)
+            }
+
+            cat_selected: list[tuple[Question, str, str, str]] = []
+            topic_pool: dict[int, list[tuple[Question, str, str, str]]] = {
+                tid: list(qs) for tid, qs in topic_dict.items()
+            }
+            for t_id in topic_pool:
+                random.shuffle(topic_pool[t_id])
+
+            shortfall = 0
+            for t_id in topic_ids:
+                t_target = topic_quotas[t_id]
+                available_in_topic = topic_pool[t_id]
+                take = min(t_target, len(available_in_topic))
+                cat_selected.extend(available_in_topic[:take])
+                topic_pool[t_id] = available_in_topic[take:]
+                shortfall += (t_target - take)
+
+            # If any topic had fewer questions than its quota, pull remaining from other topics in the SAME category
+            if shortfall > 0:
+                remaining_cat_pool = [
+                    item for tid in topic_ids for item in topic_pool[tid]
+                ]
+                random.shuffle(remaining_cat_pool)
+                cat_selected.extend(remaining_cat_pool[:shortfall])
+
+            for item in cat_selected:
+                selected_q_ids.add(item[0].id)
+
+            # Apply difficulty ordering (easy to hard)
+            cat_selected.sort(key=lambda item: item[0].difficulty_b)
+            selected_by_category.extend(cat_selected)
+
+        final_questions = selected_by_category
 
     elif practice_mode == "speed":
         target_count = 10 if (count is None or count == 5) else count
@@ -1269,7 +1433,7 @@ def generate_practice_questions(
                 assessment_id=assessment.id,
                 question_id=q.id,
                 order_index=order_idx,
-                phase="practice",
+                phase=practice_mode,
             )
         )
         items_out.append({

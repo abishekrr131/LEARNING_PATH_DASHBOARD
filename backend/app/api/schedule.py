@@ -31,10 +31,15 @@ def get_schedule(
     items = db.execute(
         select(LearningSchedule)
         .where(LearningSchedule.user_id == current_user.id)
-        .order_by(LearningSchedule.scheduled_date)
+        .order_by(LearningSchedule.scheduled_date, LearningSchedule.id)
     ).scalars().all()
 
     today = dt.date.today()
+    if items and any(item.scheduled_date < today for item in items if item.status == "pending"):
+        for idx, item in enumerate(items):
+            item.scheduled_date = today + dt.timedelta(days=idx)
+        db.commit()
+
     out = []
 
     # If user has no scheduled items yet, return clean empty list with zero counts

@@ -2,7 +2,6 @@ import React, { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useTheme } from "../context/ThemeContext";
-import FloatingGemini from "../components/FloatingGemini";
 
 export default function MainLayout({ children, currentConcept = null }) {
   const { user, profile, logout } = useAuth();
@@ -231,13 +230,6 @@ export default function MainLayout({ children, currentConcept = null }) {
           {children}
         </main>
       </div>
-
-      {/* Floating Gemini Assistant (Available on all pages, auto-suppressed during scored tests) */}
-      <FloatingGemini
-        currentConceptId={currentConcept?.id}
-        currentConceptName={currentConcept?.name}
-        pageContext={currentPage}
-      />
     </div>
   );
 }
