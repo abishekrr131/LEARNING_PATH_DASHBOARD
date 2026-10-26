@@ -2,7 +2,8 @@
  * HTTP Client and API functions for Personalized Learning Path Dashboard (RCT-GAT).
  */
 
-const API_BASE = "/api";
+const API_BASE =
+  `${import.meta.env.VITE_API_BASE_URL || ""}/api`;
 
 export function getAuthToken() {
   return localStorage.getItem("palp_access_token");
