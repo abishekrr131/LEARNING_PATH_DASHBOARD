@@ -18,6 +18,9 @@ from backend.app.schemas.target import (
     TopicOut,
 )
 from ml.graph.dag_validator import SimpleDiGraph, is_directed_acyclic_graph
+import logging
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -26,6 +29,17 @@ router = APIRouter()
 def list_targets(db: Session = Depends(get_db)):
     """List all career targets with high-level statistics."""
     targets = db.execute(select(CareerTarget).order_by(CareerTarget.category, CareerTarget.id)).scalars().all()
+    if not targets:
+        try:
+            from database.seed.seed_all import seed_database
+            logger.info("No targets found in database; auto-seeding default curricula...")
+            seed_database(db, auto_approve=True)
+            db.commit()
+            targets = db.execute(select(CareerTarget).order_by(CareerTarget.category, CareerTarget.id)).scalars().all()
+        except Exception as exc:
+            db.rollback()
+            logger.error("Auto-seeding in list_targets failed: %s", exc)
+
     out = []
     for t in targets:
         skill_count = db.execute(

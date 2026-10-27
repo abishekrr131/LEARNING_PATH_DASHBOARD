@@ -50,6 +50,20 @@ async def lifespan(app: FastAPI):
     # App startup logic: ensure database tables exist
     Base.metadata.create_all(bind=engine)
 
+    # Auto-seed database if empty of targets
+    try:
+        from backend.app.models.core import CareerTarget
+        with SessionLocal() as db_session:
+            target_count = db_session.query(CareerTarget).count()
+            if target_count == 0:
+                logger.info("Database has no targets seeded. Running auto-seeding...")
+                from database.seed.seed_all import seed_database
+                seed_database(db_session, auto_approve=True)
+                db_session.commit()
+                logger.info("Database auto-seeded successfully with all 7 targets.")
+    except Exception as exc:
+        logger.error("Auto-seeding during startup failed: %s", exc)
+
     # Start recurring background scheduler task for weekly adaptation
     async def scheduled_weekly_adaptation_worker():
         while True:

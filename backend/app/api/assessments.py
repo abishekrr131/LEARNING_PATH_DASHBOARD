@@ -942,16 +942,71 @@ def get_assessment(
     ]
 
     responses = db.execute(
-        select(StudentResponse).where(StudentResponse.assessment_id == assessment.id)
-    ).scalars().all()
+        select(
+            StudentResponse,
+            Question,
+            func.coalesce(Concept.name, "General Concept"),
+            func.coalesce(Topic.name, "General Topic"),
+            func.coalesce(Skill.name, "General Skill"),
+        )
+        .join(Question, StudentResponse.question_id == Question.id)
+        .outerjoin(Concept, Question.concept_id == Concept.id)
+        .outerjoin(Topic, Concept.topic_id == Topic.id)
+        .outerjoin(Skill, Topic.skill_id == Skill.id)
+        .where(StudentResponse.assessment_id == assessment.id)
+        .order_by(StudentResponse.id.asc())
+    ).all()
+
+    question_results = []
+    correct_count = 0
+    skip_count = 0
+    weak_topics_list = []
+
+    for resp, q, concept_name, topic_name, skill_name in responses:
+        if resp.is_correct:
+            correct_count += 1
+        if resp.skipped:
+            skip_count += 1
+        else:
+            if not resp.is_correct:
+                weak_topics_list.append({
+                    "concept_id": q.concept_id,
+                    "concept_name": concept_name,
+                    "topic_name": topic_name,
+                    "band": "weak",
+                    "gap_score": 0.8,
+                })
+
+        question_results.append({
+            "question_id": q.id,
+            "topic_name": topic_name,
+            "skill_name": skill_name,
+            "concept_id": q.concept_id,
+            "concept_name": concept_name,
+            "learner_answer": resp.selected_answer,
+            "correct_answer": q.correct_answer,
+            "is_correct": bool(resp.is_correct),
+            "skipped": bool(resp.skipped),
+            "result": "correct" if resp.is_correct else ("skipped" if resp.skipped else "incorrect"),
+            "response_time_ms": resp.response_time_ms,
+        })
+
+    total_q = len(items) if len(items) > 0 else len(responses)
 
     return {
         "assessment_id": assessment.id,
         "type": assessment.type,
+        "status": "completed" if assessment.completed_at else "in_progress",
         "completed": assessment.completed_at is not None,
-        "score": assessment.score,
+        "completed_at": assessment.completed_at.isoformat() if assessment.completed_at else None,
+        "score": assessment.score if assessment.score is not None else (round((correct_count / total_q) * 100, 1) if total_q > 0 else 0.0),
+        "total_questions": total_q,
+        "correct_count": correct_count,
+        "skip_count": skip_count,
         "items": items,
         "responses_count": len(responses),
+        "question_results": question_results,
+        "weak_topics": weak_topics_list,
     }
 
 

@@ -29,9 +29,12 @@ export default function AssessmentRunner({
   const item = items[index];
   const done = index >= items.length;
 
+  const [showSkipConfirm, setShowSkipConfirm] = useState(false);
+
   // 1 + 2: Mark the paint, not the render call
   useEffect(() => {
     setSelected(null);
+    setShowSkipConfirm(false);
     hiddenMs.current = 0;
     const id = requestAnimationFrame(() => {
       shownAt.current = performance.now();
@@ -208,29 +211,59 @@ export default function AssessmentRunner({
         })}
       </div>
 
-      {/* Action Buttons: Skip has EQUAL visual weight per Spec */}
-      <div className="grid grid-cols-2 gap-4 pt-4 border-t border-gray-100 dark:border-gray-700">
-        <button
-          type="button"
-          onClick={() => record(true)}
-          className="w-full py-3 px-6 rounded-xl border-2 border-gray-300 dark:border-gray-600 font-semibold text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors focus:ring-2 focus:ring-purple-400"
-        >
-          Skip Question
-        </button>
+      {/* Action Buttons: Skip Confirmation Modal / Buttons */}
+      {showSkipConfirm ? (
+        <div className="p-4 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900 text-center space-y-3">
+          <p className="text-xs font-semibold text-amber-900 dark:text-amber-200">
+            Are you sure you want to skip this question?
+          </p>
+          <p className="text-[11px] text-amber-700 dark:text-amber-300">
+            Skipped questions do not count towards demonstrated topic mastery.
+          </p>
+          <div className="flex justify-center gap-3">
+            <button
+              type="button"
+              onClick={() => {
+                setShowSkipConfirm(false);
+                record(true);
+              }}
+              className="py-1.5 px-4 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold transition-all shadow-sm"
+            >
+              Confirm Skip
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowSkipConfirm(false)}
+              className="py-1.5 px-4 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 text-xs font-semibold hover:bg-gray-100 dark:hover:bg-gray-800 transition-all"
+            >
+              Resume Answering
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 gap-4 pt-4 border-t border-gray-100 dark:border-gray-700">
+          <button
+            type="button"
+            onClick={() => setShowSkipConfirm(true)}
+            className="w-full py-3 px-6 rounded-xl border-2 border-gray-300 dark:border-gray-600 font-semibold text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors focus:ring-2 focus:ring-purple-400"
+          >
+            Skip Question
+          </button>
 
-        <button
-          type="button"
-          disabled={!selected}
-          onClick={() => record(false)}
-          className={`w-full py-3 px-6 rounded-xl font-semibold text-sm transition-all focus:ring-2 focus:ring-purple-400 ${
-            selected
-              ? "bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white shadow-md shadow-purple-500/20"
-              : "bg-gray-100 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed"
-          }`}
-        >
-          {index === items.length - 1 ? "Submit & Finish" : "Next Question →"}
-        </button>
-      </div>
+          <button
+            type="button"
+            disabled={!selected}
+            onClick={() => record(false)}
+            className={`w-full py-3 px-6 rounded-xl font-semibold text-sm transition-all focus:ring-2 focus:ring-purple-400 ${
+              selected
+                ? "bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white shadow-md shadow-purple-500/20"
+                : "bg-gray-100 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed"
+            }`}
+          >
+            {index === items.length - 1 ? "Submit & Finish" : "Next Question →"}
+          </button>
+        </div>
+      )}
 
       <p className="text-center text-xs text-gray-400 dark:text-gray-500 mt-4">
         Skipping is informative and treated as its own signal. Time is recorded in milliseconds.

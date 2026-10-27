@@ -1,14 +1,50 @@
 import React, { useEffect, useState } from "react";
 import { useLocation, useNavigate, useParams, Link } from "react-router-dom";
-import { learningApi, analyticsApi } from "../api/client";
+import { learningApi, analyticsApi, assessmentApi, diagnosticApi } from "../api/client";
 
 export default function AssessmentResult() {
   const { id } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
   const [result, setResult] = useState(location.state?.result || null);
+  const [loading, setLoading] = useState(!location.state?.result);
+  const [error, setError] = useState(null);
   const [roadmap, setRoadmap] = useState(location.state?.result?.roadmap || []);
   const [readiness, setReadiness] = useState(null);
+
+  useEffect(() => {
+    // If result was not passed via router state (e.g., page refresh or direct navigation)
+    if (!result && id) {
+      setLoading(true);
+      setError(null);
+      assessmentApi
+        .get(id)
+        .then((fetched) => {
+          if (!fetched || !fetched.completed) {
+            // Check if diagnostic status provides this assessment's results
+            return diagnosticApi.getStatus().then((diagStatus) => {
+              if (diagStatus?.is_completed && String(diagStatus.assessment_id) === String(id)) {
+                setResult({
+                  ...fetched,
+                  score: diagStatus.score,
+                  correct_count: diagStatus.correct_answers,
+                  total_questions: diagStatus.total_questions || fetched?.total_questions || 10,
+                  skip_count: fetched?.skip_count != null ? fetched.skip_count : 0,
+                });
+              } else {
+                setResult(fetched);
+              }
+            }).catch(() => setResult(fetched));
+          } else {
+            setResult(fetched);
+          }
+        })
+        .catch((err) => {
+          setError(err.message || "Could not load assessment result.");
+        })
+        .finally(() => setLoading(false));
+    }
+  }, [id]);
 
   useEffect(() => {
     if (!result?.roadmap || result.roadmap.length === 0) {
@@ -19,11 +55,36 @@ export default function AssessmentResult() {
     analyticsApi.getReadiness().then(setReadiness).catch(() => {});
   }, [result]);
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-slate-50 dark:bg-gray-950 flex flex-col items-center justify-center p-8 text-center">
+        <div className="w-10 h-10 border-4 border-purple-600 border-t-transparent rounded-full animate-spin mb-4" />
+        <h3 className="font-bold text-gray-900 dark:text-white">Loading Assessment Results...</h3>
+        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Retrieving persisted test performance and analysis.</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-slate-50 dark:bg-gray-950 flex flex-col items-center justify-center p-8 text-center">
+        <div className="p-6 max-w-md bg-white dark:bg-gray-900 rounded-2xl shadow-xl border border-rose-200 dark:border-rose-900">
+          <div className="text-3xl mb-2">⚠️</div>
+          <h3 className="font-bold text-gray-900 dark:text-white">Unable to Load Result</h3>
+          <p className="text-xs text-rose-600 dark:text-rose-400 mt-2 mb-4">{error}</p>
+          <Link to="/dashboard" className="px-4 py-2 bg-purple-600 text-white rounded-xl text-xs font-semibold">
+            Return to Dashboard
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
   if (!result) {
     return (
       <div className="min-h-screen bg-slate-50 dark:bg-gray-950 flex flex-col items-center justify-center p-8 text-center">
-        <h3 className="font-bold text-gray-900 dark:text-white">Assessment Complete</h3>
-        <p className="text-xs text-gray-500 mt-2 mb-4">Results have been registered to your profile.</p>
+        <h3 className="font-bold text-gray-900 dark:text-white">No Assessment Found</h3>
+        <p className="text-xs text-gray-500 mt-2 mb-4">No record found for assessment session #{id}.</p>
         <Link to="/dashboard" className="px-4 py-2 bg-purple-600 text-white rounded-xl text-xs font-semibold">
           Go to Dashboard →
         </Link>
