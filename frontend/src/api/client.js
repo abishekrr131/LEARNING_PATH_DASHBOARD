@@ -28,10 +28,29 @@ export async function apiRequest(endpoint, options = {}) {
     headers["Authorization"] = `Bearer ${token}`;
   }
 
-  const response = await fetch(`${API_BASE}${endpoint}`, {
-    ...options,
-    headers,
-  });
+  // Set timeout with AbortController
+  // Auth and Diagnostic endpoints can take longer on Render free-tier cold starts (up to 45s)
+  const timeoutMs = options.timeoutMs || (endpoint.startsWith("/auth") || endpoint.startsWith("/diagnostic/start") ? 45000 : 25000);
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+  let response;
+  try {
+    response = await fetch(`${API_BASE}${endpoint}`, {
+      ...options,
+      headers,
+      signal: controller.signal,
+    });
+  } catch (fetchErr) {
+    clearTimeout(timeoutId);
+    if (fetchErr.name === "AbortError") {
+      throw new Error(
+        "Request timed out. The server may be waking up from sleep (Render free tier). Please retry."
+      );
+    }
+    throw new Error(fetchErr.message || "Network connection failed. Please check your internet connection.");
+  }
+  clearTimeout(timeoutId);
 
   if (response.status === 204) {
     return null;
@@ -40,13 +59,12 @@ export async function apiRequest(endpoint, options = {}) {
   const data = await response.json().catch(() => ({}));
 
   if (!response.ok) {
-    if (response.status === 401) {
+    if (response.status === 401 && !endpoint.startsWith("/auth")) {
       setAuthToken(null);
       localStorage.removeItem("palp_refresh_token");
       if (
         typeof window !== "undefined" &&
-        !window.location.pathname.startsWith("/login") &&
-        !endpoint.startsWith("/auth")
+        !window.location.pathname.startsWith("/login")
       ) {
         window.location.href = "/login?reason=session_expired";
       }
@@ -192,6 +210,7 @@ export const learningApi = {
     const query = targetId ? `?target_id=${targetId}` : "";
     return apiRequest(`/learning/career-map${query}`);
   },
+  getResourceDetail: (id) => apiRequest(`/learning/resources/${id}`),
 };
 
 // --- Study Schedule Endpoints ---

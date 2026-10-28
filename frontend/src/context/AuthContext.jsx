@@ -39,11 +39,35 @@ export function AuthProvider({ children }) {
     setLoading(true);
     try {
       const data = await authApi.loginWithGoogle(idToken);
+      if (!data?.access_token) {
+        throw new Error("No access token received from authentication server.");
+      }
       setAuthToken(data.access_token);
-      localStorage.setItem("palp_refresh_token", data.refresh_token);
+      if (data.refresh_token) {
+        localStorage.setItem("palp_refresh_token", data.refresh_token);
+      }
+
+      // If user object returned by backend, populate session immediately
+      if (data.user) {
+        setUser({
+          id: data.user.id,
+          email: data.user.email,
+          name: data.user.name,
+          target_id: data.user.target_id,
+          role: data.user.role,
+        });
+        setProfile(data.user);
+        return { success: true, profile: data.user, user: data.user };
+      }
+
+      // Fallback: fetch profile from /me
       const userProfile = await fetchProfile();
       return { success: true, profile: userProfile };
     } catch (err) {
+      setAuthToken(null);
+      localStorage.removeItem("palp_refresh_token");
+      setUser(null);
+      setProfile(null);
       return { success: false, error: err.message };
     } finally {
       setLoading(false);

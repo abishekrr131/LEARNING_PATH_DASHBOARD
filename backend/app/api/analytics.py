@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 
 from backend.app.core.security import get_current_user
 from backend.app.db.session import get_db
+from backend.app.api.diagnostic import find_valid_initial_assessment
 from backend.app.models.core import (
     Assessment,
     CareerTarget,
@@ -159,16 +160,8 @@ def get_gap_analytics(
 
     total_user_attempts = len(responses)
 
-    # Fetch latest completed diagnostic
-    latest_diagnostic = db.execute(
-        select(Assessment)
-        .where(
-            Assessment.user_id == current_user.id,
-            Assessment.type == "initial",
-            Assessment.completed_at.is_not(None),
-        )
-        .order_by(Assessment.completed_at.desc())
-    ).scalars().first()
+    # Fetch latest completed diagnostic with verified responses
+    latest_diagnostic, diag_resp_count, _ = find_valid_initial_assessment(current_user.id, db)
 
     gap_items = []
     for c, skill_name, skill_weight, topic_id, topic_name in concepts_rows:
@@ -396,30 +389,31 @@ def get_gap_analytics(
 
     # Diagnostic performance summary
     diag_perf = None
-    if latest_diagnostic:
+    if latest_diagnostic and diag_resp_count > 0:
         diag_resps = db.execute(
             select(StudentResponse, Question.concept_id)
             .join(Question, StudentResponse.question_id == Question.id)
             .where(StudentResponse.assessment_id == latest_diagnostic.id)
         ).all()
-        correct_count = sum(1 for r, _ in diag_resps if r.is_correct)
-        total_q = len(diag_resps) or 10
-        acc_pct = round((correct_count / total_q) * 100, 1)
-        demonstrated_distinct = len(set(cid for r, cid in diag_resps if r.is_correct))
-        total_syllabus_topics = len(set(gi["topic_name"] for gi in gap_items))
-        cov_readiness = round((demonstrated_distinct / total_syllabus_topics) * 100, 1) if total_syllabus_topics > 0 else 0.0
+        if diag_resps:
+            correct_count = sum(1 for r, _ in diag_resps if r.is_correct)
+            total_q = len(diag_resps)
+            acc_pct = round((correct_count / total_q) * 100, 1) if total_q > 0 else 0.0
+            demonstrated_distinct = len(set(cid for r, cid in diag_resps if r.is_correct))
+            total_syllabus_topics = len(set(gi["topic_name"] for gi in gap_items))
+            cov_readiness = round((demonstrated_distinct / total_syllabus_topics) * 100, 1) if total_syllabus_topics > 0 else 0.0
 
-        diag_perf = {
-            "assessment_id": latest_diagnostic.id,
-            "score": round(latest_diagnostic.score, 1) if latest_diagnostic.score is not None else 0.0,
-            "accuracy_pct": acc_pct,
-            "correct_count": correct_count,
-            "total_questions": total_q,
-            "completed_at": latest_diagnostic.completed_at.isoformat() if latest_diagnostic.completed_at else None,
-            "distinct_topics_demonstrated": demonstrated_distinct,
-            "total_syllabus_topics": total_syllabus_topics,
-            "topic_coverage_readiness": cov_readiness,
-        }
+            diag_perf = {
+                "assessment_id": latest_diagnostic.id,
+                "score": round(latest_diagnostic.score, 1) if latest_diagnostic.score is not None else acc_pct,
+                "accuracy_pct": acc_pct,
+                "correct_count": correct_count,
+                "total_questions": total_q,
+                "completed_at": latest_diagnostic.completed_at.isoformat() if latest_diagnostic.completed_at else None,
+                "distinct_topics_demonstrated": demonstrated_distinct,
+                "total_syllabus_topics": total_syllabus_topics,
+                "topic_coverage_readiness": cov_readiness,
+            }
 
     target = db.get(CareerTarget, target_id)
 
@@ -428,7 +422,7 @@ def get_gap_analytics(
         "target_name": target.name if target else "",
         "days_to_exam": days_to_exam,
         "total_attempts": total_user_attempts,
-        "diagnostic_completed": bool(latest_diagnostic),
+        "diagnostic_completed": bool(latest_diagnostic and diag_resp_count > 0),
         "latest_diagnostic": diag_perf,
         "summary": {
             "total_concepts": len(gap_items),

@@ -103,6 +103,54 @@ class ItemSubmitIn(BaseModel):
     attempt_no: int = 1
 
 
+def find_valid_initial_assessment(user_id: int, db: Session) -> tuple[Assessment | None, int, int]:
+    """Returns the most recent valid completed initial diagnostic assessment,
+    along with (response_count, question_count).
+    An assessment is only considered valid if it has actual responses (or linked questions).
+    Empty 0-question/0-response stubs created by interrupted runs are filtered out.
+    """
+    completed_asmts = db.execute(
+        select(Assessment)
+        .where(
+            Assessment.user_id == user_id,
+            Assessment.type == "initial",
+            Assessment.completed_at.is_not(None),
+        )
+        .order_by(Assessment.completed_at.desc())
+    ).scalars().all()
+
+    for asmt in completed_asmts:
+        resp_count = db.execute(
+            select(func.count(StudentResponse.id))
+            .where(StudentResponse.assessment_id == asmt.id)
+        ).scalar() or 0
+        aq_count = db.execute(
+            select(func.count(AssessmentQuestion.id))
+            .where(AssessmentQuestion.assessment_id == asmt.id)
+        ).scalar() or 0
+
+        # Legacy compatibility check: If assessment has no direct assessment_id responses,
+        # check if student responses exist for this user in the same time window
+        if resp_count == 0 and asmt.started_at and asmt.completed_at:
+            time_window_resps = db.execute(
+                select(StudentResponse).where(
+                    StudentResponse.user_id == user_id,
+                    StudentResponse.answered_at >= asmt.started_at,
+                    StudentResponse.answered_at <= asmt.completed_at + dt.timedelta(seconds=60),
+                )
+            ).scalars().all()
+            if time_window_resps:
+                for r in time_window_resps:
+                    r.assessment_id = asmt.id
+                db.commit()
+                resp_count = len(time_window_resps)
+
+        if resp_count > 0:
+            return asmt, resp_count, aq_count
+
+    return None, 0, 0
+
+
 class DiagnosticSubmitIn(BaseModel):
     assessment_id: int
     responses: list[ItemSubmitIn]
@@ -113,44 +161,36 @@ def get_diagnostic_status(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """Returns persistent diagnostic completion status for the authenticated user."""
-    completed_asmt = db.execute(
-        select(Assessment)
-        .where(
-            Assessment.user_id == current_user.id,
-            Assessment.type == "initial",
-            Assessment.completed_at.is_not(None),
-        )
-        .order_by(Assessment.completed_at.desc())
-    ).scalars().first()
+    """Returns persistent diagnostic completion status for the authenticated user.
+    Only treats an assessment as completed if it contains verified questions and responses.
+    """
+    valid_asmt, resp_count, aq_count = find_valid_initial_assessment(current_user.id, db)
 
-    if completed_asmt:
-        total_questions = db.execute(
-            select(func.count(AssessmentQuestion.id))
-            .where(AssessmentQuestion.assessment_id == completed_asmt.id)
-        ).scalar() or 0
-
+    if valid_asmt:
         correct_count = db.execute(
             select(func.count(StudentResponse.id))
             .where(
-                StudentResponse.assessment_id == completed_asmt.id,
+                StudentResponse.assessment_id == valid_asmt.id,
                 StudentResponse.user_id == current_user.id,
                 StudentResponse.is_correct.is_(True),
             )
         ).scalar() or 0
 
-        target = db.get(CareerTarget, completed_asmt.target_id)
+        target = db.get(CareerTarget, valid_asmt.target_id)
+        total_q = resp_count if resp_count > 0 else (aq_count if aq_count > 0 else 10)
+        score_val = valid_asmt.score if valid_asmt.score is not None else round((correct_count / total_q) * 100, 1)
 
         return {
             "is_completed": True,
             "status": "completed",
-            "assessment_id": completed_asmt.id,
-            "completed_at": completed_asmt.completed_at.isoformat() if completed_asmt.completed_at else None,
-            "score": completed_asmt.score,
-            "total_questions": total_questions if total_questions > 0 else 10,
+            "assessment_id": valid_asmt.id,
+            "completed_at": valid_asmt.completed_at.isoformat() if valid_asmt.completed_at else None,
+            "score": score_val,
+            "total_questions": total_q,
             "correct_answers": correct_count,
-            "target_id": completed_asmt.target_id,
+            "target_id": valid_asmt.target_id,
             "target_name": target.name if target else "Unknown",
+            "has_valid_responses": resp_count > 0,
         }
 
     active_asmt = db.execute(
@@ -208,16 +248,10 @@ def start_diagnostic(
     if not target:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Target not found")
 
-    # Check if user already completed an initial diagnostic
-    completed_asmt = db.execute(
-        select(Assessment).where(
-            Assessment.user_id == current_user.id,
-            Assessment.type == "initial",
-            Assessment.completed_at.is_not(None),
-        ).order_by(Assessment.completed_at.desc())
-    ).scalars().first()
+    # Check if user already completed a valid initial diagnostic with actual responses
+    valid_asmt, resp_count, _ = find_valid_initial_assessment(current_user.id, db)
 
-    if completed_asmt and not req.retake:
+    if valid_asmt and not req.retake:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Initial diagnostic assessment has already been completed.",
@@ -342,6 +376,12 @@ def submit_diagnostic(
             "readiness_percentage": round(overall_readiness * 100, 1),
             "message": "Assessment was already submitted and scored.",
         }
+
+    if not req.responses:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot submit an initial diagnostic with zero responses.",
+        )
 
     answered_at = dt.datetime.now(dt.timezone.utc)
     target = db.get(CareerTarget, assessment.target_id)

@@ -482,6 +482,9 @@ def generate_initial_diagnostic_questions(
                     if len(final_db_questions) >= 10:
                         break
 
+    if not final_db_questions:
+        raise ValueError(f"No questions available in question bank for target '{target.name}'.")
+
     # 3. Create Assessment record
     assessment = Assessment(
         user_id=current_user_id,

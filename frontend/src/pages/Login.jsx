@@ -13,16 +13,25 @@ export default function Login() {
   const sessionExpired = searchParams.get("reason") === "session_expired";
   const [error, setError] = useState(null);
   const [inProgress, setInProgress] = useState(false);
+  const [statusMessage, setStatusMessage] = useState("");
   const navigate = useNavigate();
 
   const handleGoogleCredential = async (idToken) => {
+    if (inProgress) return;
     setError(null);
     setInProgress(true);
+    setStatusMessage("Verifying your Google credentials…");
+
+    // After 4 seconds, inform user about Render cold start
+    const coldStartTimer = setTimeout(() => {
+      setStatusMessage("Connecting to server… (Render free tier may take up to 45s to wake up)");
+    }, 4000);
+
     try {
       const result = await loginWithGoogle(idToken);
+      clearTimeout(coldStartTimer);
 
       if (result.success) {
-        // If user already completed onboarding and has chosen a target, route to Dashboard, else Onboarding
         const hasTarget = Boolean(
           result.profile?.target_id ||
           (result.user && result.user.target_id)
@@ -36,9 +45,12 @@ export default function Login() {
         setError(result.error || "Google authentication failed. Please retry.");
       }
     } catch (err) {
+      clearTimeout(coldStartTimer);
       setError(err.message || "An unexpected error occurred during Google Sign-in");
     } finally {
+      clearTimeout(coldStartTimer);
       setInProgress(false);
+      setStatusMessage("");
     }
   };
 
@@ -102,12 +114,14 @@ export default function Login() {
               </div>
 
               {(inProgress || loading) && (
-                <div className="flex items-center justify-center space-x-2 text-xs text-purple-600 dark:text-purple-400 font-medium pt-1">
-                  <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
-                  </svg>
-                  <span>Signing in with Google…</span>
+                <div className="flex flex-col items-center justify-center space-y-1 text-xs text-purple-600 dark:text-purple-400 font-medium pt-2">
+                  <div className="flex items-center space-x-2">
+                    <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                    </svg>
+                    <span>{statusMessage || "Signing in with Google…"}</span>
+                  </div>
                 </div>
               )}
             </div>

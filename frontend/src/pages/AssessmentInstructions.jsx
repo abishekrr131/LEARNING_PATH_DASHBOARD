@@ -22,7 +22,7 @@ export default function AssessmentInstructions() {
   }, []);
 
   const handleStartDiagnostic = async () => {
-    if (existingStatus?.is_completed) {
+    if (existingStatus?.is_completed && existingStatus?.has_valid_responses) {
       navigate(`/result/${existingStatus.assessment_id}`);
       return;
     }

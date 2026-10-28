@@ -1,5 +1,6 @@
 from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException, status, Request
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 from google.oauth2 import id_token
 from google.auth.transport import requests as google_requests
@@ -76,7 +77,7 @@ def google_sign_in(payload: GoogleAuthIn, db: Session = Depends(get_db)):
             )
 
     # Upsert user record with google_sub
-    user = db.query(User).filter((User.google_sub == sub) | (User.email == email)).first()
+    user = db.query(User).filter((User.google_sub == sub) | (func.lower(User.email) == email.lower())).first()
     if not user:
         user = User(
             email=email,

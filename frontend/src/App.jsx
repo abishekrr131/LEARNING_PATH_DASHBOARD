@@ -19,6 +19,7 @@ import WeakTopics from "./pages/WeakTopics";
 import RootCauseAnalysis from "./pages/RootCauseAnalysis";
 import LearningPath from "./pages/LearningPath";
 import Resources from "./pages/Resources";
+import StudyMaterialDetail from "./pages/StudyMaterialDetail";
 import StudySchedule from "./pages/StudySchedule";
 import PracticeMode from "./pages/PracticeMode";
 import AssessmentsHub from "./pages/AssessmentsHub";
@@ -116,6 +117,14 @@ export default function App() {
               element={
                 <ProtectedRoute>
                   <Resources />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/resources/:id"
+              element={
+                <ProtectedRoute>
+                  <StudyMaterialDetail />
                 </ProtectedRoute>
               }
             />

@@ -59,5 +59,8 @@ frontend/.env
 # Secrets and database backups
 *.bak
 *.backup
+*.dump
 *.db-journal
 *.sqlite-journal
+exports/
+

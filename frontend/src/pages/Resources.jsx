@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, Link } from "react-router-dom";
 import MainLayout from "../layouts/MainLayout";
 import { learningApi } from "../api/client";
 
@@ -194,9 +194,32 @@ export default function Resources() {
                       </span>
                     </div>
 
-                    <h3 className="font-bold text-gray-900 dark:text-white text-base line-clamp-2 leading-snug">
-                      {res.title}
-                    </h3>
+                    {(() => {
+                      const url = res.url || "";
+                      const isInternal =
+                        res.is_internal ||
+                        !url ||
+                        url.includes("learn.internal") ||
+                        url.startsWith("/") ||
+                        url.startsWith("internal:");
+
+                      if (isInternal && (res.id || res.concept_id)) {
+                        return (
+                          <Link
+                            to={`/resources/${res.id || res.concept_id}`}
+                            className="font-bold text-gray-900 dark:text-white text-base line-clamp-2 leading-snug hover:text-purple-600 dark:hover:text-purple-400 transition-colors"
+                          >
+                            {res.title}
+                          </Link>
+                        );
+                      }
+
+                      return (
+                        <h3 className="font-bold text-gray-900 dark:text-white text-base line-clamp-2 leading-snug">
+                          {res.title}
+                        </h3>
+                      );
+                    })()}
 
                     <div className="flex items-center space-x-1.5 text-xs text-purple-600 dark:text-purple-400 font-medium mt-1.5">
                       <span>{res.topic_name || "Topic"}</span>
@@ -228,15 +251,52 @@ export default function Resources() {
                     <span className="text-[11px] text-gray-400 font-medium truncate max-w-[150px]">
                       {res.provider || "Verified Source"}
                     </span>
-                    <a
-                      href={res.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center space-x-1 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-semibold shadow-sm transition-colors"
-                    >
-                      <span>Study Now</span>
-                      <span>↗</span>
-                    </a>
+                    {(() => {
+                      const url = res.url || "";
+                      const isInternal =
+                        res.is_internal ||
+                        !url ||
+                        url.includes("learn.internal") ||
+                        url.startsWith("/") ||
+                        url.startsWith("internal:");
+                      const hasExternalUrl =
+                        !isInternal && /^https?:\/\//i.test(url);
+
+                      if (hasExternalUrl) {
+                        return (
+                          <a
+                            href={url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center space-x-1 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-semibold shadow-sm transition-colors"
+                          >
+                            <span>Study Online</span>
+                            <span>↗</span>
+                          </a>
+                        );
+                      }
+
+                      if (res.id || res.concept_id) {
+                        return (
+                          <Link
+                            to={`/resources/${res.id || res.concept_id}`}
+                            className="inline-flex items-center space-x-1 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-semibold shadow-sm transition-colors"
+                          >
+                            <span>Study Notes</span>
+                            <span>→</span>
+                          </Link>
+                        );
+                      }
+
+                      return (
+                        <button
+                          disabled
+                          className="inline-flex items-center space-x-1 px-4 py-2 bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500 rounded-xl text-xs font-semibold cursor-not-allowed border border-gray-200 dark:border-gray-700"
+                        >
+                          <span>Material Pending</span>
+                        </button>
+                      );
+                    })()}
                   </div>
                 </div>
               );

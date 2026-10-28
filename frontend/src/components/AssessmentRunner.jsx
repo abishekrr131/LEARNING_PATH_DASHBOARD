@@ -27,9 +27,22 @@ export default function AssessmentRunner({
   const hiddenAt = useRef(null);
 
   const item = items[index];
-  const done = index >= items.length;
+  const totalItems = items && Array.isArray(items) ? items.length : 0;
+  const done = totalItems > 0 && index >= totalItems;
 
   const [showSkipConfirm, setShowSkipConfirm] = useState(false);
+
+  if (!items || !Array.isArray(items) || items.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center p-12 text-center bg-white dark:bg-gray-900 rounded-3xl border border-gray-100 dark:border-gray-800 shadow-sm space-y-3">
+        <div className="text-3xl">⚠️</div>
+        <h3 className="text-base font-bold text-gray-900 dark:text-white">No Questions Available</h3>
+        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 max-w-sm">
+          No questions were found for this assessment session. Please retry or contact administrator.
+        </p>
+      </div>
+    );
+  }
 
   // 1 + 2: Mark the paint, not the render call
   useEffect(() => {
@@ -88,7 +101,7 @@ export default function AssessmentRunner({
   );
 
   useEffect(() => {
-    if (!done || responses.length !== items.length || submitting) return;
+    if (!done || totalItems === 0 || responses.length !== totalItems || submitting) return;
     setSubmitting(true);
 
     if (onSubmit) {

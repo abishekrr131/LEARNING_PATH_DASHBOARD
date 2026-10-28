@@ -51,7 +51,11 @@ export default function WeakTopics() {
     return g.band === filterBand;
   });
 
-  const hasDiagnosticData = Boolean(data?.diagnostic_completed || (data?.total_attempts && data.total_attempts > 0));
+  const hasDiagnosticData = Boolean(
+    data?.diagnostic_completed &&
+    diagPerf &&
+    diagPerf.total_questions > 0
+  );
 
   return (
     <MainLayout>
@@ -86,7 +90,7 @@ export default function WeakTopics() {
         </div>
 
         {/* Diagnostic Performance & Readiness Overview */}
-        {diagPerf && (
+        {hasDiagnosticData && diagPerf && (
           <div className="p-6 rounded-3xl bg-gradient-to-r from-purple-900/90 via-indigo-900/80 to-purple-950 border border-purple-500/30 text-white shadow-xl shadow-purple-900/10">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
               <div>
