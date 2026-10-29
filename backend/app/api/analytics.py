@@ -442,44 +442,72 @@ def get_gap_analytics(
 @router.get("/root-causes")
 def get_root_cause_analytics(
     concept_id: int | None = None,
+    target_id: int | None = None,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     """Returns root-cause prerequisite attribution (Phase 4):
     - Validates curriculum concept mapping and DAG prerequisite ancestors.
+    - Scopes concept selection, masteries, and DAG strictly to active career target.
     - Classifies cognitive error type from student response and diagnostic probe evidence.
     - Computes attention weights and normalized entropy H_bar (F8) with honesty guard.
     - Explicitly returns attribution states:
       'valid_attribution', 'no_valid_prerequisites', 'missing_graph_mapping', 'insufficient_evidence'.
     """
-    profile = db.execute(
-        select(LearnerProfile).where(LearnerProfile.user_id == current_user.id)
-    ).scalar_one_or_none()
-    target_id = profile.target_id if profile else 1
+    if target_id is None:
+        profile = db.execute(
+            select(LearnerProfile).where(LearnerProfile.user_id == current_user.id)
+        ).scalar_one_or_none()
+        target_id = profile.target_id if (profile and profile.target_id) else 1
 
-    # Masteries map for user
-    masteries = db.execute(
-        select(StudentMastery).where(StudentMastery.user_id == current_user.id)
-    ).scalars().all()
-    mastery_map = {m.concept_id: m.mastery_score for m in masteries}
-
-    # Load target info and all curriculum concepts in target for concept selection dropdown
     target_obj = db.get(CareerTarget, target_id)
+    if not target_obj:
+        target_id = 1
+        target_obj = db.get(CareerTarget, 1)
+
     target_name = target_obj.name if target_obj else "General Curriculum"
 
+    # Load all curriculum concepts strictly for this target
     target_concepts_rows = db.execute(
         select(Concept, Topic.name, Skill.name)
         .join(Topic, Concept.topic_id == Topic.id)
         .join(Skill, Topic.skill_id == Skill.id)
         .where(Skill.target_id == target_id)
-        .order_by(Topic.id, Concept.id)
+        .order_by(Skill.id, Topic.id, Concept.id)
     ).all()
 
-    # Query all user responses across target to compute mistake counts per concept
+    if not target_concepts_rows:
+        target_id = 1
+        target_obj = db.get(CareerTarget, 1)
+        target_name = target_obj.name if target_obj else "General Curriculum"
+        target_concepts_rows = db.execute(
+            select(Concept, Topic.name, Skill.name)
+            .join(Topic, Concept.topic_id == Topic.id)
+            .join(Skill, Topic.skill_id == Skill.id)
+            .where(Skill.target_id == 1)
+            .order_by(Skill.id, Topic.id, Concept.id)
+        ).all()
+
+    target_concept_map = {c.id: (c, tname, sname) for c, tname, sname in target_concepts_rows}
+    target_concept_ids = set(target_concept_map.keys())
+
+    # Masteries map for user strictly within this target
+    masteries = db.execute(
+        select(StudentMastery).where(
+            StudentMastery.user_id == current_user.id,
+            StudentMastery.concept_id.in_(target_concept_ids),
+        )
+    ).scalars().all()
+    mastery_map = {m.concept_id: m.mastery_score for m in masteries}
+
+    # Query user responses strictly within this target to compute mistake counts per concept
     all_user_resps = db.execute(
         select(StudentResponse.question_id, StudentResponse.is_correct, Question.concept_id)
         .join(Question, StudentResponse.question_id == Question.id)
-        .where(StudentResponse.user_id == current_user.id)
+        .where(
+            StudentResponse.user_id == current_user.id,
+            Question.concept_id.in_(target_concept_ids),
+        )
     ).all()
     mistakes_by_concept: dict[int, int] = {}
     attempts_by_concept: dict[int, int] = {}
@@ -505,7 +533,11 @@ def get_root_cause_analytics(
             "is_weak": is_weak,
         })
 
-    # If no concept_id specified, pick the first concept with mistakes, or weakest assessed concept
+    # 1. Validate provided concept_id: must belong strictly to this target curriculum
+    if concept_id is not None and concept_id not in target_concept_ids:
+        concept_id = None
+
+    # 2. If no valid concept_id specified, pick the best candidate in THIS target
     if not concept_id:
         concepts_with_mistakes = [tc for tc in target_concepts_list if tc["mistakes_count"] > 0]
         if concepts_with_mistakes:
@@ -513,37 +545,47 @@ def get_root_cause_analytics(
         else:
             weakest = db.execute(
                 select(StudentMastery)
-                .where(StudentMastery.user_id == current_user.id)
+                .where(
+                    StudentMastery.user_id == current_user.id,
+                    StudentMastery.concept_id.in_(target_concept_ids),
+                )
                 .order_by(StudentMastery.mastery_score.asc())
             ).scalars().first()
-            if weakest:
+            if weakest and weakest.concept_id in target_concept_ids:
                 concept_id = weakest.concept_id
+            elif target_concepts_list:
+                concept_id = target_concepts_list[0]["concept_id"]
             else:
-                first_c = db.execute(select(Concept.id)).scalars().first()
-                concept_id = first_c or 1
+                concept_id = next(iter(target_concept_ids))
 
     surface_concept = db.get(Concept, concept_id)
     if not surface_concept:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Concept not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Concept not found in target curriculum",
+        )
 
     surface_mastery = mastery_map.get(surface_concept.id, 0.45)
 
-    # Concept names and all curriculum concept IDs
-    all_cs = db.execute(select(Concept)).scalars().all()
-    name_map = {c.id: c.name for c in all_cs}
-    all_concept_ids = {c.id for c in all_cs}
+    # Concept names mapped strictly for this target
+    name_map = {c.id: c.name for c, _, _ in target_concepts_rows}
 
-    # Build curriculum DAG
-    deps = db.execute(select(ConceptDependency)).scalars().all()
+    # Build curriculum DAG scoped strictly to this target's concept dependencies
+    deps = db.execute(
+        select(ConceptDependency).where(
+            ConceptDependency.prerequisite_concept_id.in_(target_concept_ids),
+            ConceptDependency.dependent_concept_id.in_(target_concept_ids),
+        )
+    ).scalars().all()
     g = SimpleDiGraph([(d.prerequisite_id, d.concept_id) for d in deps])
-    # Ensure all nodes exist in graph
-    for cid in all_concept_ids:
+    # Ensure all target nodes exist in graph
+    for cid in target_concept_ids:
         g.add_node(cid)
 
-    # Verify prerequisite relationship on DAG
+    # Verify prerequisite relationship on scoped target DAG
     attr_state, ancestors = verify_graph_prerequisites(
         graph=g,
-        all_concept_ids=all_concept_ids,
+        all_concept_ids=target_concept_ids,
         concept_id=surface_concept.id,
         max_hops=2,
     )
@@ -602,26 +644,28 @@ def get_root_cause_analytics(
                 "explanation": a_q.explanation or "Standard step-by-step solution.",
             })
 
-    # Direct incoming and outgoing prerequisite edges
+    # Direct incoming and outgoing prerequisite edges within target
     direct_prerequisites = []
     for p_id in g.predecessors(surface_concept.id):
-        p_c = db.get(Concept, p_id)
-        if p_c:
-            direct_prerequisites.append({
-                "concept_id": p_c.id,
-                "concept_name": p_c.name,
-                "mastery": round(mastery_map.get(p_c.id, 0.5), 2),
-            })
+        if p_id in target_concept_ids:
+            p_c = db.get(Concept, p_id)
+            if p_c:
+                direct_prerequisites.append({
+                    "concept_id": p_c.id,
+                    "concept_name": p_c.name,
+                    "mastery": round(mastery_map.get(p_c.id, 0.5), 2),
+                })
 
     direct_dependents = []
     for d_id in g.successors(surface_concept.id):
-        d_c = db.get(Concept, d_id)
-        if d_c:
-            direct_dependents.append({
-                "concept_id": d_c.id,
-                "concept_name": d_c.name,
-                "mastery": round(mastery_map.get(d_c.id, 0.5), 2),
-            })
+        if d_id in target_concept_ids:
+            d_c = db.get(Concept, d_id)
+            if d_c:
+                direct_dependents.append({
+                    "concept_id": d_c.id,
+                    "concept_name": d_c.name,
+                    "mastery": round(mastery_map.get(d_c.id, 0.5), 2),
+                })
 
     failed_resp = next((r for r in user_resps if not r.is_correct), None)
     sub_resps = []
@@ -649,10 +693,13 @@ def get_root_cause_analytics(
     else:
         final_state = attr_state
 
-    # Diagnosed cognitive gaps from 3 sub-question stages
+    # Diagnosed cognitive gaps from 3 sub-question stages within target
     rc_records = db.execute(
         select(RootCauseAnalysis)
-        .where(RootCauseAnalysis.user_id == current_user.id)
+        .where(
+            RootCauseAnalysis.user_id == current_user.id,
+            RootCauseAnalysis.current_concept_id.in_(target_concept_ids),
+        )
         .order_by(RootCauseAnalysis.created_at.desc())
     ).scalars().all()
 
@@ -718,6 +765,7 @@ def get_root_cause_analytics(
         honesty_disclaimer = "No failed question attempts recorded for this concept. Further practice drills will calibrate prerequisite attribution."
 
     return {
+        "target_id": target_id,
         "target_name": target_name,
         "surface_concept_id": surface_concept.id,
         "surface_concept_name": surface_concept.name,

@@ -182,8 +182,11 @@ export const weeklyTestApi = {
 export const analyticsApi = {
   getMastery: () => apiRequest("/analytics/mastery"),
   getGaps: () => apiRequest("/analytics/gaps"),
-  getRootCauses: (conceptId) => {
-    const query = conceptId ? `?concept_id=${conceptId}` : "";
+  getRootCauses: (conceptId, targetId) => {
+    const params = new URLSearchParams();
+    if (conceptId) params.append("concept_id", conceptId);
+    if (targetId) params.append("target_id", targetId);
+    const query = params.toString() ? `?${params.toString()}` : "";
     return apiRequest(`/analytics/root-causes${query}`);
   },
   getWeeklySnapshots: () => apiRequest("/analytics/weekly-snapshots"),

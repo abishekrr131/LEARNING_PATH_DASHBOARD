@@ -1,11 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { GoogleOAuthProvider, GoogleLogin } from "@react-oauth/google";
+import { GoogleLogin } from "@react-oauth/google";
 import { useAuth } from "../context/AuthContext";
-
-const GOOGLE_CLIENT_ID =
-  import.meta.env.VITE_GOOGLE_CLIENT_ID ||
-  "733371913106-aipdp3csna740cm0j2qcp2o9lv23d8r8.apps.googleusercontent.com";
 
 export default function Login() {
   const { loginWithGoogle, loading } = useAuth();
@@ -55,8 +51,7 @@ export default function Login() {
   };
 
   return (
-    <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
-      <div className="min-h-screen bg-slate-50 dark:bg-gray-950 flex flex-col justify-center items-center px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-slate-50 dark:bg-gray-950 flex flex-col justify-center items-center px-4 sm:px-6 lg:px-8">
         {/* Background Gradient Orbs */}
         <div className="absolute top-1/4 -left-20 w-80 h-80 bg-purple-500/20 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute bottom-1/4 -right-20 w-80 h-80 bg-rose-500/20 rounded-full blur-3xl pointer-events-none" />
@@ -133,8 +128,7 @@ export default function Login() {
               </p>
             </div>
           </div>
-        </div>
       </div>
-    </GoogleOAuthProvider>
+    </div>
   );
 }

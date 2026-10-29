@@ -1,7 +1,18 @@
 {
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "Cross-Origin-Opener-Policy",
+          "value": "same-origin-allow-popups"
+        }
+      ]
+    }
+  ],
   "rewrites": [
     {
-      "source": "/((?!api/|_next/|assets/|favicon.ico|vite.svg).*)",
+      "source": "/(.*)",
       "destination": "/index.html"
     }
   ]

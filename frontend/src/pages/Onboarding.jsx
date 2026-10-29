@@ -26,16 +26,22 @@ export default function Onboarding() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
 
-  useEffect(() => {
+  const fetchTargets = () => {
+    setLoading(true);
+    setError(null);
     targetApi
       .list()
       .then((data) => {
-        setTargets(data);
+        setTargets(Array.isArray(data) ? data : []);
       })
       .catch((err) => {
-        setError("Failed to load available career curricula.");
+        setError("Failed to load available career curricula. Please retry.");
       })
       .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    fetchTargets();
   }, []);
 
   const filteredTargets = targets.filter((t) => t.category === track);
@@ -159,41 +165,68 @@ export default function Onboarding() {
             </p>
 
             <div className="space-y-3 max-h-80 overflow-y-auto pr-1">
-              {filteredTargets.map((t) => {
-                const isSelected = selectedTargetId === t.id;
-                return (
-                  <label
-                    key={t.id}
-                    onClick={() => setSelectedTargetId(t.id)}
-                    className={`flex items-start p-4 rounded-xl border cursor-pointer transition-all ${
-                      isSelected
-                        ? "border-purple-600 bg-purple-50/50 dark:bg-purple-900/20 text-purple-950 dark:text-purple-100 shadow-sm"
-                        : "border-gray-200 dark:border-gray-700 hover:border-purple-300 dark:hover:border-purple-600/50 text-gray-800 dark:text-gray-200"
-                    }`}
+              {loading ? (
+                <div className="py-12 flex flex-col items-center justify-center space-y-3">
+                  <div className="w-8 h-8 border-4 border-purple-600 border-t-transparent rounded-full animate-spin" />
+                  <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">
+                    Loading curriculum targets…
+                  </span>
+                </div>
+              ) : filteredTargets.length === 0 ? (
+                <div className="p-6 rounded-2xl border border-dashed border-gray-200 dark:border-gray-800 text-center space-y-3 my-4">
+                  <div className="text-2xl">📋</div>
+                  <h4 className="text-sm font-bold text-gray-800 dark:text-gray-200">
+                    No Targets Available Yet
+                  </h4>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 max-w-sm mx-auto">
+                    Curricula targets are currently synchronizing from the database. Click below to refresh.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={fetchTargets}
+                    className="px-4 py-2 text-xs font-bold bg-purple-600 hover:bg-purple-700 text-white rounded-xl shadow-md transition-all inline-flex items-center space-x-1.5"
                   >
-                    <div
-                      className={`w-5 h-5 rounded-full border-2 flex items-center justify-center mr-3 mt-0.5 shrink-0 ${
+                    <span>↻</span>
+                    <span>Reload Curricula</span>
+                  </button>
+                </div>
+              ) : (
+                filteredTargets.map((t) => {
+                  const isSelected = selectedTargetId === t.id;
+                  return (
+                    <label
+                      key={t.id}
+                      onClick={() => setSelectedTargetId(t.id)}
+                      className={`flex items-start p-4 rounded-xl border cursor-pointer transition-all ${
                         isSelected
-                          ? "border-purple-600 bg-purple-600 text-white"
-                          : "border-gray-300 dark:border-gray-600"
+                          ? "border-purple-600 bg-purple-50/50 dark:bg-purple-900/20 text-purple-950 dark:text-purple-100 shadow-sm"
+                          : "border-gray-200 dark:border-gray-700 hover:border-purple-300 dark:hover:border-purple-600/50 text-gray-800 dark:text-gray-200"
                       }`}
                     >
-                      {isSelected && <span className="text-[10px]">✓</span>}
-                    </div>
-                    <div className="flex-1">
-                      <div className="font-bold text-sm text-gray-900 dark:text-white">{t.name}</div>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{t.description}</p>
-                      <div className="flex items-center space-x-3 mt-2 text-[11px] text-gray-400">
-                        <span>{t.skill_count} Skills</span>
-                        <span>•</span>
-                        <span>{t.concept_count} Concepts</span>
-                        <span>•</span>
-                        <span>{t.question_count} Curated Questions</span>
+                      <div
+                        className={`w-5 h-5 rounded-full border-2 flex items-center justify-center mr-3 mt-0.5 shrink-0 ${
+                          isSelected
+                            ? "border-purple-600 bg-purple-600 text-white"
+                            : "border-gray-300 dark:border-gray-600"
+                        }`}
+                      >
+                        {isSelected && <span className="text-[10px]">✓</span>}
                       </div>
-                    </div>
-                  </label>
-                );
-              })}
+                      <div className="flex-1">
+                        <div className="font-bold text-sm text-gray-900 dark:text-white">{t.name}</div>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{t.description}</p>
+                        <div className="flex items-center space-x-3 mt-2 text-[11px] text-gray-400">
+                          <span>{t.skill_count} Skills</span>
+                          <span>•</span>
+                          <span>{t.concept_count} Concepts</span>
+                          <span>•</span>
+                          <span>{t.question_count} Curated Questions</span>
+                        </div>
+                      </div>
+                    </label>
+                  );
+                })
+              )}
             </div>
 
             <div className="mt-8 flex justify-end">

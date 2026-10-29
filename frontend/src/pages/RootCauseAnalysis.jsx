@@ -1,9 +1,13 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { useSearchParams, Link } from "react-router-dom";
 import { analyticsApi } from "../api/client";
+import { useAuth } from "../context/AuthContext";
 import MainLayout from "../layouts/MainLayout";
 
 export default function RootCauseAnalysis() {
+  const { profile } = useAuth();
+  const currentTargetId = profile?.target_id || null;
+
   const [searchParams, setSearchParams] = useSearchParams();
   const conceptId = searchParams.get("concept_id");
 
@@ -21,7 +25,7 @@ export default function RootCauseAnalysis() {
     setLoading(true);
     setError(null);
     Promise.all([
-      analyticsApi.getRootCauses(conceptId ? parseInt(conceptId) : null),
+      analyticsApi.getRootCauses(conceptId ? parseInt(conceptId, 10) : null, currentTargetId),
       analyticsApi.getWeeklySnapshots().catch(() => null),
     ])
       .then(([rootCauseData, weekly]) => {
@@ -34,14 +38,21 @@ export default function RootCauseAnalysis() {
 
   useEffect(() => {
     fetchAnalysis();
-  }, [conceptId]);
+  }, [conceptId, currentTargetId]);
+
+  // Synchronize URL search params if server validated or sanitized the concept ID
+  useEffect(() => {
+    if (analysis?.surface_concept_id && String(conceptId) !== String(analysis.surface_concept_id)) {
+      setSearchParams({ concept_id: String(analysis.surface_concept_id) }, { replace: true });
+    }
+  }, [analysis?.surface_concept_id]);
 
   const handleManualWeeklyRefresh = async () => {
     setRefreshingWeekly(true);
     try {
       const updated = await analyticsApi.refreshWeekly();
       setWeeklyData(updated);
-      const rc = await analyticsApi.getRootCauses(conceptId ? parseInt(conceptId) : null);
+      const rc = await analyticsApi.getRootCauses(conceptId ? parseInt(conceptId, 10) : null, currentTargetId);
       setAnalysis(rc);
     } catch (e) {
       console.error("Weekly refresh failed", e);

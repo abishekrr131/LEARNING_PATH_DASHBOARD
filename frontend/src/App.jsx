@@ -1,8 +1,16 @@
 import React from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { GoogleOAuthProvider } from "@react-oauth/google";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { ThemeProvider } from "./context/ThemeContext";
 import ErrorBoundary from "./components/ErrorBoundary";
+import { installGsiGuard } from "./utils/gsiGuard";
+
+installGsiGuard();
+
+const GOOGLE_CLIENT_ID =
+  import.meta.env.VITE_GOOGLE_CLIENT_ID ||
+  "733371913106-aipdp3csna740cm0j2qcp2o9lv23d8r8.apps.googleusercontent.com";
 
 // Pages
 import Landing from "./pages/Landing";
@@ -50,10 +58,11 @@ function ProtectedRoute({ children }) {
 
 export default function App() {
   return (
-    <ErrorBoundary>
-      <ThemeProvider>
-      <AuthProvider>
-        <BrowserRouter>
+    <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
+      <ErrorBoundary>
+        <ThemeProvider>
+        <AuthProvider>
+          <BrowserRouter>
           <Routes>
             {/* Public Routes */}
             <Route path="/" element={<Landing />} />
@@ -254,5 +263,6 @@ export default function App() {
       </AuthProvider>
     </ThemeProvider>
     </ErrorBoundary>
+    </GoogleOAuthProvider>
   );
 }

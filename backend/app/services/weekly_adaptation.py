@@ -78,15 +78,30 @@ def compute_weekly_adaptation(
     correct_count = sum(1 for r in window_responses if r.is_correct)
     accuracy_pct = round((correct_count / total_attempts * 100), 2) if total_attempts > 0 else 0.0
 
-    # Query current student mastery estimates
+    # Determine user's active career target
+    profile = db.execute(
+        select(LearnerProfile).where(LearnerProfile.user_id == user_id)
+    ).scalar_one_or_none()
+    target_id = profile.target_id if (profile and profile.target_id) else 1
+
+    # Scope concepts and names to the user's active target
+    target_concepts = db.execute(
+        select(Concept)
+        .join(Topic, Concept.topic_id == Topic.id)
+        .join(Skill, Topic.skill_id == Skill.id)
+        .where(Skill.target_id == target_id)
+    ).scalars().all()
+    target_concept_ids = {c.id for c in target_concepts}
+    concept_names = {c.id: c.name for c in target_concepts}
+
+    # Query current student mastery estimates strictly within target
     masteries = db.execute(
-        select(StudentMastery).where(StudentMastery.user_id == user_id)
+        select(StudentMastery).where(
+            StudentMastery.user_id == user_id,
+            StudentMastery.concept_id.in_(target_concept_ids),
+        )
     ).scalars().all()
     mastery_estimates = {m.concept_id: round(m.mastery_score, 4) for m in masteries}
-
-    # Fetch concept names
-    all_concepts = db.execute(select(Concept)).scalars().all()
-    concept_names = {c.id: c.name for c in all_concepts}
 
     # Calculate WoW mastery delta comparing with latest previous snapshot
     prev_snapshot = latest_existing
@@ -98,19 +113,26 @@ def compute_weekly_adaptation(
     else:
         wow_delta = 0.0
 
-    # Recompute ranked root causes across weak concepts
-    deps = db.execute(select(ConceptDependency)).scalars().all()
+    # Recompute ranked root causes across weak concepts strictly within target
+    deps = db.execute(
+        select(ConceptDependency).where(
+            ConceptDependency.prerequisite_concept_id.in_(target_concept_ids),
+            ConceptDependency.dependent_concept_id.in_(target_concept_ids),
+        )
+    ).scalars().all()
     g = SimpleDiGraph([(d.prerequisite_id, d.concept_id) for d in deps])
+    for cid in target_concept_ids:
+        g.add_node(cid)
 
     ranked_root_causes = []
     remediation_priorities = []
 
-    # Identify concepts with weakness (<0.70) or failures in window
+    # Identify concepts with weakness (<0.70) or failures in window strictly within target
     failed_concept_ids = set()
     for resp in window_responses:
         if not resp.is_correct and resp.question_id:
             q = db.get(Question, resp.question_id)
-            if q and q.concept_id:
+            if q and q.concept_id and q.concept_id in target_concept_ids:
                 failed_concept_ids.add(q.concept_id)
 
     weak_concept_ids = {cid for cid, m in mastery_estimates.items() if m < 0.70}.union(failed_concept_ids)
